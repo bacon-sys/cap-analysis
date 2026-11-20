@@ -15,7 +15,7 @@
 :root {
   --navy: #1d3c6e; --blue: #2a5ea8; --blue-soft: #e8eff9; --ink: #1c2430; --ink-2: #4a5566; --ink-3: #6b7686;
   --line: #d9dfe8; --bg: #f4f6f9; --card: #ffffff;
-  --good: #2f8a55; --good-bg: #e5f3ea; --warn: #a86e00; --warn-bg: #fbf0d6; --bad: #b8432d; --bad-bg: #f9e3dd;
+  --good: #1f6b40; --good-bg: #e5f3ea; --warn: #8a5a00; --warn-bg: #fbf0d6; --bad: #9c3622; --bad-bg: #f9e3dd;
   --lv-low: #d0563c; --lv-mid: #d99a00; --lv-high: #2f9a5a;
   --s-school: #2a78d6; --s-nat: #eb6834; --s-cty: #1baf7a;
   --gap0: #f6dcd4; --gap1: #e8907a; --gap2: #b83f28;
@@ -133,7 +133,7 @@ td.optcell { min-width: 13rem; }
 .optbar { display: flex; height: 1.6rem; border-radius: 4px; overflow: hidden; gap: 2px; background: #fff; }
 .optbar.sm { height: 1.5rem; }
 .optbar .seg { display: flex; align-items: center; justify-content: center; font-size: .78rem; color: #fff; overflow: hidden; white-space: nowrap; min-width: 0; }
-.optbar .seg.ok { background: #2f9a5a; } .optbar .seg.bad { background: #d0563c; } .optbar .seg.other { background: #b9c3cf; color: #1c2430; } .optbar .seg.none { background: #e3e7ec; color: #4a5566; }
+.optbar .seg.ok { background: #237a47; } .optbar .seg.bad { background: #b8432d; } .optbar .seg.other { background: #b9c3cf; color: #1c2430; } .optbar .seg.none { background: #e3e7ec; color: #4a5566; }
 .gapchip { display: inline-block; min-width: 3.4rem; text-align: right; border-radius: 4px; padding: 0 .35rem; }
 .gapchip.l0 { background: var(--gap0); } .gapchip.l1 { background: var(--gap1); } .gapchip.l2 { background: var(--gap2); color: #fff; }
 table.mini { border-collapse: collapse; width: 100%; font-size: .92rem; }
@@ -184,7 +184,8 @@ details.passage summary { cursor: pointer; color: var(--blue); margin-bottom: .4
 #guide summary h2::before { content: '▸ '; color: var(--blue); }
 #guide details[open] > summary h2::before { content: '▾ '; }
 .guide { margin-top: 1rem; display: grid; gap: 1rem; }
-.gstep { display: grid; grid-template-columns: 2.6rem 1fr; gap: .9rem; align-items: start; }
+.gstep { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: .9rem; align-items: start; }
+.gstep td { white-space: normal; }
 .gstep .gn { width: 2.4rem; height: 2.4rem; border-radius: 50%; background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
 .gstep.safe .gn { background: var(--good-bg); }
 .gstep h3 { margin: .2rem 0 .3rem; }
@@ -300,6 +301,7 @@ footer { text-align: center; color: var(--ink-3); font-size: .85rem; padding: 1r
     <div class="gstep safe" id="privacy"><div class="gn">🔒</div><div>
       <h3>資料不會外流：怎麼確定？</h3>
       <p>這個網站沒有伺服器，也沒有資料庫。網頁打開後，檔案的讀取、解析、計算、畫圖全部在你自己的瀏覽器裡完成；關閉或重新整理網頁就清除了。</p>
+      <p class="note">說明得精確一點：網頁打開時，會從公開的程式庫網站（jsDelivr）下載圖表與檔案解析元件，並從 Google Fonts 下載字型。這些下載發生在你選檔案之前，內容是公開的程式與字型，不包含任何學校資料。</p>
       <p><b>選資料夾時 Chrome 會問「要將 N 個檔案上傳到這個網站嗎？」</b>這是瀏覽器遇到「選擇資料夾」時固定會跳出的提醒，用語是「上傳」，實際上只是允許這個網頁讀取你選的檔案，檔案不會因此送到任何地方。</p>
       <p>不必只相信這段文字，你可以自己驗證：</p>
       <ol class="verify">
@@ -404,12 +406,12 @@ footer { text-align: center; color: var(--ink-3); font-size: .85rem; padding: 1r
     <span><i style="background:var(--gap2)"></i>−0.30 以上</span>
   </div>
   <div class="patlegend">
-    <div><span class="pat pat-long">長期需求</span>三年差距都大（平均 −0.25 以下）且穩定：最值得長期經營</div>
-    <div><span class="pat pat-widen">差距連續擴大</span>三年一路變大（共 0.07 以上）：值得留意</div>
-    <div><span class="pat pat-narrow">差距連續縮小</span>三年一路變小（共 0.07 以上）：可作為成果</div>
+    <div><span class="pat pat-long">長期需求</span>三年差距都大（平均 −0.25 以下）且穩定：可列為長期經營重點</div>
+    <div><span class="pat pat-widen">差距連續擴大</span>三年沒有縮小、共擴大 0.07 以上（含持平後擴大）：值得留意</div>
+    <div><span class="pat pat-narrow">差距連續縮小</span>三年沒有擴大、共縮小 0.07 以上（含持平後縮小）：可作為成效線索</div>
     <div><span class="pat pat-steady">差距穩定</span>三年起伏在 0.07 以內：維持並觀察</div>
-    <div><span class="pat pat-swing">起伏大</span>忽大忽小：受各屆學生與考題影響，不宜過度解讀</div>
-    <div class="pl-note">由上往下依序判斷，符合就停止；只看最近三年的「本校減全國」差距。</div>
+    <div><span class="pat pat-swing">起伏大</span>忽大忽小：可能受各屆學生與考題影響，不宜過度解讀</div>
+    <div class="pl-note">由上往下依序判斷，符合就停止；只看最近三年的「本校減全國」差距。型態描述的是數據的變化，不代表已確認原因，宜搭配段考、課堂觀察等資料判讀。</div>
   </div>
   <div class="heat compact" id="heat"></div>
   <table id="patternLegend" class="hidden"></table>
@@ -732,10 +734,10 @@ footer { text-align: center; color: var(--ink-3); font-size: .85rem; padding: 1r
   }
   const PATTERN_LABEL = { long: '長期需求', widen: '差距連續擴大', narrow: '差距連續縮小', swing: '起伏大', steady: '差距穩定' };
   const PATTERN_DESC = {
-    long: '三年差距都偏大且穩定：不同屆學生都卡在這裡，是本校學生的長期學習需求，值得長期經營。',
-    widen: '三年差距一路擴大：方向一致，值得留意；但每屆人數少，仍需用段考持續觀察。',
-    narrow: '三年差距一路縮小：方向一致，可作為成果說明。',
-    swing: '三年差距忽大忽小：主要受各屆學生組成與考題影響，單一年的高低不宜過度解讀。',
+    long: '三年差距都偏大且穩定：不同屆學生都在這裡落後全國，可列為長期經營的重點。',
+    widen: '三年差距沒有縮小、整體擴大 0.07 以上：值得留意；每屆人數少，宜搭配段考等資料持續觀察。',
+    narrow: '三年差距沒有擴大、整體縮小 0.07 以上：可作為檢視教學成效的線索。',
+    swing: '三年差距忽大忽小：可能受各屆學生組成與考題影響，單一年的高低不宜過度解讀。',
     steady: '三年差距穩定、幅度中等：維持現有教學並持續觀察。',
   };
   // 差距顏色等級：0 淺、1 中、2 深
@@ -1695,7 +1697,10 @@ function renderSub(A) {
   $('subSource').innerHTML = '📄 資料來源：' + srcs.map(r => {
     const ys = [...new Set(Object.values(r.data.subjects).flatMap(s => s.years))].sort();
     return `${r.year} 年「全校各科分項能力通過率分析」（報告內本來就含 ${ys[0]}–${ys[ys.length - 1]} 年）`;
-  }).join('、') + '。心測中心的這份報告每年都附上近三年的數據，所以只上傳一個年份也能看到三年變化。';
+  }).join('、') + '。心測中心的這份報告每年都附上近三年的數據，所以只上傳一個年份也能看到三年變化。' + (() => {
+    const ns = Object.values(A.validN).flatMap(o => Object.values(o)).filter(Boolean);
+    return ns.length ? `<br>小樣本提醒：已上傳年份的各科有效人數為 ${Math.min(...ns)}–${Math.max(...ns)} 人，一位學生約影響通過率 ${(1 / Math.max(...ns)).toFixed(2)}–${(1 / Math.min(...ns)).toFixed(2)}。` : '';
+  })();
   if (!ids.length) { wrap.innerHTML = '<div class="empty">尚未上傳「全校各科分項能力通過率分析」。</div>'; return; }
   const C = { sch: css('--s-school'), nat: css('--s-nat') };
   const tabs = document.createElement('div'); tabs.className = 'subtabs'; tabs.setAttribute('role', 'tablist'); wrap.appendChild(tabs);
@@ -1781,7 +1786,7 @@ function renderRules(A) {
     <li>每屆考生人數少時，一位學生就能讓通過率明顯變動；加上每年考題難易不同，所以<b>不看單年通過率的升降</b>，而看「本校減全國」差距的多年型態。</li>
     ${impact}
     <li>會考數據用來找出學生的<b>長期學習特性</b>，作為規劃教學與補救的參考，<b>不用來評斷個別教師</b>。</li>
-    <li>「長期需求」代表不同屆的學生都卡在同一個分項，最值得長期經營；「起伏大」主要受各屆學生組成與考題影響，不宜過度解讀。</li>`;
+    <li>「長期需求」表示連續三年都在同一個分項明顯落後全國，可列為長期經營的重點；「起伏大」可能受各屆學生組成與考題影響，不宜過度解讀。差距型態只描述數據變化，原因仍需教師搭配其他資料判斷。</li>`;
 }
 
 // ---------- 第二階段：逐題分析 ----------
@@ -1811,7 +1816,7 @@ function buildItems() {
           no, year: y, subject: id,
           skill: pi ? pi.skill : '', objective: (wi && wi.objective) || (pi ? pi.objective : ''),
           nat: pi ? pi.nat : null, cty: pi ? pi.cty : null,
-          sch: wi && wi.p != null ? wi.p : (pi ? pi.sch : null),
+          sch: pi && pi.sch != null ? pi.sch : (wi && wi.p != null ? +wi.p.toFixed(2) : null),
           answer: wi ? wi.answer : null, N: wi ? wi.N : null, dist: wi ? wi.dist : null, distByGroup: wi ? wi.distByGroup : null,
           groups: wi ? wi.groups : null, disc: wi ? wi.disc : null,
           stemHtml: wi ? wi.stemHtml : '', transcriptHtml: wi ? wi.transcriptHtml : '', passage: wi ? wi.passage : null,
@@ -1885,7 +1890,7 @@ function renderItemSubject(d, y, id) {
     <div class="stat"><div class="k">題數</div><div class="v">${items.length}<small> 題</small></div><div class="s">${d.openEnded.length ? `另有非選擇題 ${d.openEnded.length} 題` : '&nbsp;'}</div></div>
     <div class="stat"><div class="k">有效人數</div><div class="v">${d.N ?? '—'}<small> 人</small></div><div class="s">${d.N ? `一位學生約 ${(1 / d.N).toFixed(2)}` : '&nbsp;'}</div></div>
     <div class="stat"><div class="k">本校平均通過率</div><div class="v">${p2(avg('sch'))}</div><div class="s">全國 ${p2(avg('nat'))}・差距 ${f2(avg('sch') != null && avg('nat') != null ? avg('sch') - avg('nat') : null)}</div></div>
-    <div class="stat"><div class="k">有高誘答選項的題目</div><div class="v">${d.hasWord ? nMis : '—'}<small> 題</small></div><div class="s">${d.hasWord ? `其中過半選同一錯誤選項 ${nHalf} 題` : '需 Word 學校版'}</div></div>
+    <div class="stat"><div class="k">有高誘答選項的題目</div><div class="v">${d.hasWord ? nMis : '—'}<small> 題</small></div><div class="s">${d.hasWord ? `其中至少一半的學生選同一錯誤選項 ${nHalf} 題` : '需 Word 學校版'}</div></div>
   </div>`;
   h += `<h3>各題通過率</h3><p class="note">藍色長條是本校、橘色點線是全國。點長條可以看該題的題目與選答情形。</p>
     <div class="legend"><span><i style="background:var(--s-school)"></i>本校</span><span><i class="line" style="background:var(--s-nat)"></i>全國</span></div>
@@ -2004,7 +2009,7 @@ function openItem(d, no) {
     <div class="stat"><div class="k">本校通過率</div><div class="v">${p2(it.sch)}</div><div class="s">${it.N && it.answer ? `${it.dist[it.answer] || 0} / ${it.N} 人答對` : '&nbsp;'}</div></div>
     <div class="stat"><div class="k">全國／縣市</div><div class="v" style="font-size:1.5rem">${p2(it.nat)}／${p2(it.cty)}</div><div class="s">本校−全國 ${f2(it.gap)}</div></div>
   </div>`;
-  if (it.mis.length) h += `<div class="misbox">⚠️ <b>${Math.round(it.mis[0].share * 100)}% 的學生選了 ${it.mis[0].option}</b>（${it.mis[0].n}/${it.N} 人；正答是 ${it.answer}）。${it.mis.length > 1 ? `另有 ${it.mis.slice(1).map(m => `${Math.round(m.share * 100)}% 選 ${m.option}`).join('、')}。` : ''}這是最值得在課堂上釐清的地方：先看這個選項為什麼吸引學生。</div>`;
+  if (it.mis.length) h += `<div class="misbox">⚠️ <b>${Math.round(it.mis[0].share * 100)}% 的學生選了 ${it.mis[0].option}</b>（${it.mis[0].n}/${it.N} 人；正答是 ${it.answer}）。${it.mis.length > 1 ? `另有 ${it.mis.slice(1).map(m => `${Math.round(m.share * 100)}% 選 ${m.option}`).join('、')}。` : ''}建議搭配原題，看看這個選項為什麼吸引學生；它是值得討論的線索，不一定代表所有選它的學生都有相同迷思。</div>`;
   if (it.dist && it.N) {
     const groups = ['全體', '精熟', '基礎', '待加強'].filter(g => it.distByGroup[g] && it.distByGroup[g]['全體'] && it.distByGroup[g]['全體'].n);
     const keys = ['A', 'B', 'C', 'D', '未作答', '複選'].filter(k => it.dist[k] != null && (k.length === 1 || it.dist[k] > 0));
