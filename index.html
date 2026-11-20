@@ -1,0 +1,2193 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 安全規則：禁止本網頁對外傳送任何資料（connect-src 'none'、form-action 'none'），圖片只允許本機產生的 data:／blob: -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data: blob:; connect-src 'none'; form-action 'none'; worker-src blob:; base-uri 'none'">
+<title>國中教育會考 學校數據分析</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+:root {
+  --navy: #1d3c6e; --blue: #2a5ea8; --blue-soft: #e8eff9; --ink: #1c2430; --ink-2: #4a5566; --ink-3: #6b7686;
+  --line: #d9dfe8; --bg: #f4f6f9; --card: #ffffff;
+  --good: #2f8a55; --good-bg: #e5f3ea; --warn: #a86e00; --warn-bg: #fbf0d6; --bad: #b8432d; --bad-bg: #f9e3dd;
+  --lv-low: #d0563c; --lv-mid: #d99a00; --lv-high: #2f9a5a;
+  --s-school: #2a78d6; --s-nat: #eb6834; --s-cty: #1baf7a;
+  --gap0: #f6dcd4; --gap1: #e8907a; --gap2: #b83f28;
+}
+* { box-sizing: border-box; }
+html { font-size: 18px; }
+body { margin: 0; font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif; color: var(--ink); background: var(--bg); line-height: 1.75; }
+header.top { background: var(--navy); color: #fff; padding: 1.6rem 1.2rem 1.4rem; }
+header.top .wrap { max-width: 1180px; margin: 0 auto; }
+header.top h1 { margin: 0; font-size: 1.75rem; letter-spacing: .04em; }
+header.top p { margin: .3rem 0 0; color: #d4e0f2; font-size: 1rem; }
+header.top .school { margin-top: .6rem; font-size: 1.15rem; font-weight: 700; color: #fff; }
+main { max-width: 1180px; margin: 0 auto; padding: 1.2rem; }
+section.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1.4rem 1.5rem; margin-bottom: 1.3rem; }
+h2 { font-size: 1.4rem; margin: 0 0 .3rem; color: var(--navy); }
+h3 { font-size: 1.15rem; margin: 1.2rem 0 .5rem; color: var(--ink); }
+.lead { color: var(--ink-2); margin: 0 0 1rem; }
+.note { color: var(--ink-3); font-size: .9rem; }
+.privacy { display: flex; gap: .7rem; align-items: flex-start; background: var(--good-bg); border-radius: 10px; padding: .8rem 1rem; margin-bottom: 1rem; color: #1e5b37; }
+.privacy b { white-space: nowrap; }
+.drop { border: 2px dashed #9fb3d1; border-radius: 12px; padding: 1.6rem 1rem; text-align: center; background: #fafcff; transition: background .15s, border-color .15s; }
+.drop.over { background: var(--blue-soft); border-color: var(--blue); }
+.drop .big { font-size: 1.2rem; font-weight: 700; margin-bottom: .6rem; }
+.btns { display: flex; gap: .8rem; justify-content: center; flex-wrap: wrap; margin-top: .4rem; }
+button, .btn { font: inherit; font-size: 1rem; border-radius: 8px; border: 1px solid var(--blue); background: var(--blue); color: #fff; padding: .55rem 1.2rem; cursor: pointer; min-height: 2.6rem; }
+button.ghost { background: #fff; color: var(--blue); }
+button:hover { filter: brightness(1.08); }
+button:focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
+input[type=file] { display: none; }
+.status { margin-top: .9rem; font-size: 1rem; color: var(--ink-2); min-height: 1.5em; }
+.warnbox { background: var(--warn-bg); color: #6d4800; border-radius: 10px; padding: .7rem 1rem; margin-top: .8rem; }
+.warnbox p { margin: .2rem 0; }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: .4rem 0 .6rem; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+th, td { border-bottom: 1px solid var(--line); padding: .5rem .65rem; text-align: left; vertical-align: middle; white-space: nowrap; }
+th { background: #eef2f7; color: var(--ink-2); font-weight: 500; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.wrap { white-space: normal; min-width: 12rem; }
+.tag { display: inline-block; border-radius: 999px; padding: .05rem .65rem; font-size: .88rem; font-weight: 500; line-height: 1.6; white-space: nowrap; }
+.tag.ok { background: var(--good-bg); color: var(--good); }
+.tag.wait { background: var(--blue-soft); color: var(--blue); }
+.tag.err { background: var(--bad-bg); color: var(--bad); }
+.tag.warn { background: var(--warn-bg); color: var(--warn); }
+nav.tabs { position: sticky; top: 0; z-index: 5; background: rgba(244,246,249,.96); backdrop-filter: blur(4px); border-bottom: 1px solid var(--line); margin: 0 -1.2rem 1.2rem; padding: .5rem 1.2rem; display: flex; gap: .4rem; overflow-x: auto; }
+nav.tabs a { flex: none; text-decoration: none; color: var(--ink-2); padding: .35rem .85rem; border-radius: 999px; font-size: .95rem; }
+nav.tabs a:hover { background: var(--blue-soft); color: var(--blue); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .9rem; }
+.stat { border: 1px solid var(--line); border-radius: 10px; padding: .9rem 1rem; background: #fbfcfe; }
+.stat .k { color: var(--ink-3); font-size: .9rem; }
+.stat .v { font-size: 2rem; font-weight: 700; color: var(--navy); line-height: 1.3; font-variant-numeric: tabular-nums; }
+.stat .v small { font-size: 1rem; font-weight: 500; color: var(--ink-2); }
+.stat .s { font-size: .88rem; color: var(--ink-2); }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr)); gap: 1rem; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(21rem, 1fr)); gap: 1rem; }
+@media (max-width: 640px) { .grid2, .grid3 { grid-template-columns: 1fr; } section.card { padding: 1.1rem 1rem; } }
+.panel { border: 1px solid var(--line); border-radius: 10px; padding: .9rem 1rem; background: #fff; }
+.panel h4 { margin: 0 0 .3rem; font-size: 1.05rem; display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
+.chartbox { position: relative; width: 100%; }
+.legend { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; font-size: .92rem; color: var(--ink-2); margin: .2rem 0 .6rem; }
+.legend i { display: inline-block; width: .95rem; height: .95rem; border-radius: 3px; vertical-align: -.12rem; margin-right: .35rem; }
+.legend i.line { height: 3px; border-radius: 2px; vertical-align: .25rem; width: 1.3rem; }
+.delta { font-size: .9rem; font-variant-numeric: tabular-nums; }
+.delta.up { color: var(--bad); } .delta.down { color: var(--good); } .delta.flat { color: var(--ink-3); }
+.pat { display: inline-block; border-radius: 6px; padding: .02rem .55rem; font-size: .88rem; font-weight: 500; }
+.pat-long { background: var(--bad-bg); color: var(--bad); }
+.pat-widen { background: var(--warn-bg); color: var(--warn); }
+.pat-narrow { background: var(--good-bg); color: var(--good); }
+.pat-swing { background: #eceff3; color: #4a5566; }
+.pat-steady { background: var(--blue-soft); color: var(--blue); }
+.gapline { font-size: .9rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pdesc { font-size: .9rem; color: var(--ink-2); margin: .3rem 0 0; }
+.heat { display: grid; grid-template-columns: 7rem 1fr; gap: .6rem 1rem; align-items: stretch; }
+.heat .subj { font-weight: 700; color: var(--navy); padding-top: .5rem; }
+.heat .cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: .5rem; }
+.cell { border-radius: 8px; padding: .55rem .7rem; min-height: 5.6rem; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid #fff; }
+.cell .n { font-weight: 500; font-size: .95rem; line-height: 1.4; }
+.cell .g { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cell .t { font-size: .8rem; background: rgba(255,255,255,.88); color: var(--ink); border-radius: 4px; padding: 0 .4rem; align-self: flex-start; }
+.cell.l0 { background: var(--gap0); color: var(--ink); }
+.cell.l1 { background: var(--gap1); color: #2a1410; }
+.cell.l2 { background: var(--gap2); color: #fff; }
+@media (max-width: 640px) { .heat { grid-template-columns: 1fr; } }
+.subtabs { display: flex; flex-wrap: wrap; gap: .5rem; margin: .2rem 0 1rem; border-bottom: 2px solid var(--line); padding-bottom: .7rem; }
+.subtabs button { background: #fff; color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: .4rem 1rem; min-height: 2.5rem; }
+.subtabs button .c { font-size: .85rem; color: var(--ink-3); margin-left: .35rem; }
+.subtabs button .lc { font-size: .8rem; background: var(--bad-bg); color: var(--bad); border-radius: 999px; padding: 0 .45rem; margin-left: .35rem; }
+.subtabs button[aria-selected="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+.subtabs button[aria-selected="true"] .c { color: #d4e0f2; }
+.subpane { display: none; }
+.subpane.on { display: block; }
+.panel.flash { box-shadow: 0 0 0 3px #f0b429; transition: box-shadow .3s; }
+.cell { cursor: pointer; }
+.cell:hover { outline: 2px solid var(--navy); }
+.yrrow { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-bottom: .6rem; }
+.yrrow button { background: #fff; color: var(--blue); min-height: 2.3rem; padding: .3rem .9rem; }
+.yrrow button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+.picklist { list-style: none; margin: .3rem 0 0; padding: 0; }
+.picklist li { border-top: 1px solid var(--line); }
+.picklist li:first-child { border-top: none; }
+.itemlink { width: 100%; background: none; border: none; color: var(--ink); text-align: left; display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; padding: .5rem .2rem; border-radius: 6px; min-height: auto; }
+.itemlink:hover { background: var(--blue-soft); filter: none; }
+.itemlink b { color: var(--navy); white-space: nowrap; }
+.itemlink .sk { color: var(--ink-3); font-size: .88rem; }
+.itemlink .rt { margin-left: auto; font-size: .95rem; font-variant-numeric: tabular-nums; }
+.toolbar { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; margin: .3rem 0 .5rem; }
+.toolbar select { font: inherit; font-size: .95rem; padding: .3rem .5rem; border-radius: 6px; border: 1px solid var(--line); background: #fff; min-height: 2.3rem; }
+.toolbar .chk { display: flex; align-items: center; gap: .35rem; cursor: pointer; }
+.toolbar input[type=checkbox] { width: 1.15rem; height: 1.15rem; }
+table.itemtable td.obj { min-width: 14rem; max-width: 22rem; font-size: .9rem; color: var(--ink-2); }
+tr.clickrow { cursor: pointer; }
+tr.clickrow:hover td { background: #f3f7fd; }
+tr.clickrow:focus-visible { outline: 3px solid #f0b429; }
+tr.grouprow td { background: #eef2f7; color: var(--navy); white-space: normal; }
+td.optcell { min-width: 13rem; }
+.optbar { display: flex; height: 1.6rem; border-radius: 4px; overflow: hidden; gap: 2px; background: #fff; }
+.optbar.sm { height: 1.5rem; }
+.optbar .seg { display: flex; align-items: center; justify-content: center; font-size: .78rem; color: #fff; overflow: hidden; white-space: nowrap; min-width: 0; }
+.optbar .seg.ok { background: #2f9a5a; } .optbar .seg.bad { background: #d0563c; } .optbar .seg.other { background: #b9c3cf; color: #1c2430; } .optbar .seg.none { background: #e3e7ec; color: #4a5566; }
+.gapchip { display: inline-block; min-width: 3.4rem; text-align: right; border-radius: 4px; padding: 0 .35rem; }
+.gapchip.l0 { background: var(--gap0); } .gapchip.l1 { background: var(--gap1); } .gapchip.l2 { background: var(--gap2); color: #fff; }
+table.mini { border-collapse: collapse; width: 100%; font-size: .92rem; }
+table.mini td, table.mini th { padding: .3rem .5rem; }
+td.okc { color: var(--good); font-weight: 700; } td.badc { color: var(--bad); font-weight: 700; }
+.hbar { background: #eef1f5; border-radius: 3px; height: .8rem; overflow: hidden; }
+.hbar span { display: block; height: 100%; background: var(--blue); }
+.hbar.big { height: 1.4rem; flex: 1; }
+.hbar span.ok { background: #2f9a5a; } .hbar span.bad { background: #d0563c; } .hbar span.other { background: #b9c3cf; } .hbar span.none { background: #d5dbe3; }
+.optrows { display: grid; gap: .35rem; margin-bottom: .8rem; }
+.optrow { display: flex; align-items: center; gap: .7rem; }
+.optrow .ol { width: 4.2rem; font-weight: 700; }
+.optrow .on { width: 7.5rem; text-align: right; font-variant-numeric: tabular-nums; }
+#modal { position: fixed; inset: 0; background: rgba(20,30,45,.55); z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 3vh 1rem; }
+#modalBox { background: #fff; border-radius: 14px; width: min(980px, 100%); max-height: 94vh; overflow-y: auto; padding: 1.3rem 1.6rem 1.6rem; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+body.noscroll { overflow: hidden; }
+.mhead { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; position: sticky; top: -1.3rem; background: #fff; padding: .4rem 0 .6rem; border-bottom: 1px solid var(--line); z-index: 2; }
+.mhead h2 { margin: 0; }
+.mtags { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .2rem; }
+.mnav { display: flex; gap: .5rem; flex-wrap: wrap; }
+.mnav button:disabled { opacity: .4; cursor: default; }
+.mobj { margin: .7rem 0; }
+.mstats { margin: .6rem 0 .9rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 640px) { .mstats .v { font-size: 1.3rem !important; } .mstats .stat { padding: .6rem; } #modalBox { padding: 1rem; } .optrow .on { width: 6rem; font-size: .9rem; } }
+.misbox { background: var(--bad-bg); color: #6e2414; border-radius: 10px; padding: .7rem 1rem; margin-bottom: .6rem; }
+.qbody { border: 1px solid var(--line); border-radius: 10px; padding: .8rem 1rem; line-height: 1.9; font-family: 'Noto Sans TC', 'Times New Roman', serif; overflow-x: auto; }
+.qbody p { margin: .15rem 0; }
+.qbody img.fig { max-width: 100%; height: auto !important; display: block; margin: .4rem 0; }
+.qbody img.eq { vertical-align: middle; max-width: 100%; }
+.qbody .txbox { border: 1px solid #8a94a3; padding: .5rem .8rem; margin: .4rem 0; border-radius: 2px; background: #fff; }
+.qbody .txfig { display: inline-block; vertical-align: bottom; margin: .3rem .8rem .3rem 0; text-align: center; }
+.qbody .txfig p { margin: 0; }
+.qbody .txfig img.fig { margin: 0 auto; }
+.qbody .gloss { font-size: .88rem; color: var(--ink-2); border-left: 3px solid #c3cbd6; padding: .1rem .7rem; margin: .4rem 0; }
+.qbody .gloss p { margin: 0; }
+.qbody .figcaps { display: flex; gap: 2.5rem; margin: .1rem 0 .5rem; font-size: .92rem; color: var(--ink-2); }
+.qbody .figgroup { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-end; margin: .4rem 0; }
+.qbody .figgroup img.fig { display: inline-block; margin: 0; }
+.qbody table.qtable { border-collapse: collapse; margin: .4rem 0; width: auto; }
+.qbody table.qtable td { border: 1px solid #c9d1dc; padding: .25rem .5rem; white-space: normal; vertical-align: top; }
+.qbody .transcript, .transcript { background: #fbfcfe; }
+.qlabel { font-weight: 700; color: var(--navy); margin: .6rem 0 .3rem; }
+details.passage { margin-bottom: .7rem; }
+details.passage summary { cursor: pointer; color: var(--blue); margin-bottom: .4rem; }
+.subbtn { margin-top: .6rem; font-size: .9rem; min-height: 2.2rem; padding: .25rem .8rem; }
+#guide summary { cursor: pointer; list-style: none; }
+#guide summary::-webkit-details-marker { display: none; }
+#guide summary h2::before { content: '▸ '; color: var(--blue); }
+#guide details[open] > summary h2::before { content: '▾ '; }
+.guide { margin-top: 1rem; display: grid; gap: 1rem; }
+.gstep { display: grid; grid-template-columns: 2.6rem 1fr; gap: .9rem; align-items: start; }
+.gstep .gn { width: 2.4rem; height: 2.4rem; border-radius: 50%; background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.gstep.safe .gn { background: var(--good-bg); }
+.gstep h3 { margin: .2rem 0 .3rem; }
+.gstep p { margin: .2rem 0 .5rem; }
+.faq summary { cursor: pointer; color: var(--blue); font-weight: 500; }
+.faq dt { font-weight: 700; margin-top: .6rem; }
+.faq dd { margin: .2rem 0 0 1rem; color: var(--ink-2); }
+.pp-list { display: grid; gap: .45rem; margin: .8rem 0 1rem; }
+.pp-list label { display: flex; gap: .5rem; align-items: center; cursor: pointer; }
+.pp-list input { width: 1.15rem; height: 1.15rem; }
+.pp-sub { margin-left: 1.9rem; display: grid; gap: .3rem; }
+.printhead { border-bottom: 2px solid var(--navy); padding-bottom: .4rem; margin-bottom: .8rem; }
+.printhead h1 { font-size: 1.6rem; color: var(--navy); margin: 0; }
+.printhead p { margin: .1rem 0; color: var(--ink-2); }
+.netbadge { margin-top: .8rem; font-size: .95rem; display: inline-block; border-radius: 999px; padding: .15rem .8rem; }
+.netbadge.on { background: #eef1f5; color: var(--ink-2); }
+.netbadge.off { background: var(--good-bg); color: var(--good); font-weight: 500; }
+ol.verify { margin: .3rem 0 0; padding-left: 1.4rem; }
+ol.verify li { margin-bottom: .45rem; }
+code { background: #eef1f5; border-radius: 4px; padding: 0 .3rem; font-size: .9em; }
+.checkok { background: var(--good-bg); color: #1e5b37; border-radius: 10px; padding: .7rem 1rem; }
+.checklist { margin: .3rem 0 .8rem; padding-left: 1.3rem; }
+.checklist li { margin-bottom: .35rem; }
+.meantbl td { vertical-align: top; min-width: 13rem; }
+.meantbl .mt { font-size: .9rem; color: var(--ink-2); margin-top: .2rem; }
+.gapchip.big { font-size: 1.25rem; font-weight: 700; padding: .05rem .55rem; min-width: 4.4rem; }
+.heat.compact { grid-template-columns: 6.5rem 1fr; gap: .45rem .8rem; }
+.heat.compact .subj { padding-top: .25rem; font-size: .95rem; }
+.heat.compact .cells { grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .35rem; }
+.heat.compact .cell { min-height: 0; padding: .3rem .55rem; border-width: 1px; border-radius: 6px; }
+.heat.compact .cell .n { font-size: .85rem; line-height: 1.35; }
+.heat.compact .cell .gt { display: flex; align-items: baseline; justify-content: space-between; gap: .3rem; }
+.heat.compact .cell .g { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.heat.compact .cell .t { font-size: .72rem; background: rgba(255,255,255,.88); color: var(--ink); border-radius: 3px; padding: 0 .3rem; white-space: nowrap; }
+@media (max-width: 640px) { .heat.compact { grid-template-columns: 1fr; } }
+table.even { table-layout: fixed; }
+table.even th, table.even td { text-align: center; }
+table.even th:first-child, table.even td:first-child { text-align: left; width: 7.5rem; }
+table.even td.num, table.even th.num { text-align: center; }
+.patlegend { display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); gap: .25rem 1.2rem; font-size: .88rem; color: var(--ink-2); margin: .2rem 0 .8rem; line-height: 1.5; }
+.patlegend .pat { font-size: .78rem; margin-right: .35rem; }
+.patlegend .pl-note { grid-column: 1 / -1; color: var(--ink-3); font-size: .82rem; }
+#meanCharts { grid-template-columns: repeat(var(--mcols, 3), minmax(0, 1fr)); }
+@media (max-width: 900px) { #meanCharts { grid-template-columns: 1fr; } }
+.principles li { margin-bottom: .5rem; }
+.empty { text-align: center; color: var(--ink-3); padding: 1rem; }
+details.tablev summary { cursor: pointer; color: var(--blue); font-size: .95rem; margin-top: .3rem; }
+.hidden { display: none !important; }
+.printonly { display: none; }
+footer { text-align: center; color: var(--ink-3); font-size: .85rem; padding: 1rem 1rem 2rem; }
+@media print {
+  @page { size: A4 portrait; margin: 12mm 11mm 14mm; }
+  html { font-size: 13px; }
+  body { background: #fff; line-height: 1.55; }
+  header.top, #guide, #upload, nav.tabs, .noprint, details.tablev, #modal, .toolbar, .subbtn, .openq, .subtabs, #itemYears, #itemTabs { display: none !important; }
+  main { padding: 0; max-width: none; }
+  .printonly { display: block !important; }
+  section.card { border: none; padding: 0; margin: 0 0 1rem; border-radius: 0; }
+  #results section.card.pbreak { break-before: page; }
+  section.card.skipprint { display: none !important; }
+  .subpane { display: block !important; }
+  .grid2, .grid3 { grid-template-columns: 1fr 1fr !important; gap: .6rem; }
+  #levelCharts { grid-template-columns: 1fr 1fr !important; }
+  .panel, .cell, .stat, .gstep, tr, .misbox { break-inside: avoid; }
+  h2, h3, h4 { break-after: avoid; }
+  .stats { grid-template-columns: repeat(4, 1fr) !important; }
+  .stat .v { font-size: 1.6rem; }
+  .chartbox { min-width: 0 !important; }
+  .table-scroll { overflow: visible; }
+  table { font-size: .88rem; }
+  th, td { padding: .3rem .4rem; }
+  table.itemtable td.obj { min-width: 0; max-width: none; }
+  td.optcell { min-width: 9rem; }
+  .heat.compact { grid-template-columns: 5rem 1fr; }
+  .heat.compact .cells { grid-template-columns: repeat(4, 1fr); }
+  #sec-items.printall #itemsBody { display: none; }
+  #printItems h3 { break-before: page; }
+  #printItems h3:first-child { break-before: auto; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <h1>國中教育會考 學校數據分析</h1>
+  <p>上傳心測中心提供的學校報告，自動產生圖表與跨年比較</p>
+  <div class="school" id="schoolName"></div>
+</div></header>
+
+<main>
+<section class="card noprint" id="guide">
+  <details id="guideDetails" open>
+  <summary><h2 style="display:inline">使用說明</h2><span class="note">（第一次使用請先看；上傳後會自動收起，點標題可再展開）</span></summary>
+  <div class="guide">
+    <div class="gstep"><div class="gn">1</div><div>
+      <h3>把心測中心的學校報告資料夾整包上傳</h3>
+      <p>按「選擇資料夾」選解壓縮後的資料夾，或直接把資料夾拖進下方框框。不用改檔名，網站會讀檔案內容自動辨識年份與種類。</p>
+      <div class="table-scroll"><table>
+        <thead><tr><th>檔案</th><th>格式</th><th>網站用來分析</th></tr></thead>
+        <tbody>
+          <tr><td>全校學生成績報告</td><td>PDF</td><td>考生人數、各科能力等級、寫作級分</td></tr>
+          <tr><td>全校各科試題通過率分析</td><td>PDF</td><td>各科平均通過率、逐題與全國比較、題目所屬分項</td></tr>
+          <tr><td>全校各科分項能力通過率分析</td><td>PDF</td><td>分項能力近三年表現、差距型態、色塊總覽</td></tr>
+          <tr><td>各科試題分析（學校版，共 6 份）</td><td>Word</td><td>逐題選答比例、高誘答選項、題目內容</td></tr>
+        </tbody></table></div>
+      <p class="note">Word 試題分析請用學校版（前言寫「所根據的資料是貴校報考…」）；全國版沒有本校資料，網站會提醒。資料夾裡的 Excel 檔與其他檔案會自動略過。缺了某份檔案也能用，只是少了對應的分析。可以一次放多個年份，網站會自動做跨年比較。</p>
+    </div></div>
+    <div class="gstep"><div class="gn">2</div><div>
+      <h3>看結果、列印或存成 PDF</h3>
+      <p>上傳後下方會出現各項分析，可用上方的段落列快速跳轉；逐題分析中點任何一題可看題目與選答情形。</p>
+      <p>要列印或存成 PDF，按段落列右邊的「列印」，勾選要印的段落，再在列印視窗選印表機或「另存為 PDF」（A4 直式）。<span id="printNote"></span></p>
+    </div></div>
+    <div class="gstep safe" id="privacy"><div class="gn">🔒</div><div>
+      <h3>資料不會外流：怎麼確定？</h3>
+      <p>這個網站沒有伺服器，也沒有資料庫。網頁打開後，檔案的讀取、解析、計算、畫圖全部在你自己的瀏覽器裡完成；關閉或重新整理網頁就清除了。</p>
+      <p><b>選資料夾時 Chrome 會問「要將 N 個檔案上傳到這個網站嗎？」</b>這是瀏覽器遇到「選擇資料夾」時固定會跳出的提醒，用語是「上傳」，實際上只是允許這個網頁讀取你選的檔案，檔案不會因此送到任何地方。</p>
+      <p>不必只相信這段文字，你可以自己驗證：</p>
+      <ol class="verify">
+        <li><b>斷網測試（最簡單）：</b>先打開這個網頁，接著拔掉網路線或關閉 Wi-Fi（下方會顯示「目前離線」），再上傳檔案。分析照常完成，就表示整個過程不需要、也沒有把資料傳出去。</li>
+        <li><b>瀏覽器安全規則：</b>網頁開頭寫了一條安全規則（Content-Security-Policy 的 <code>connect-src 'none'</code>），要求瀏覽器禁止這個網頁對外傳送任何資料；就算程式想傳，瀏覽器也會擋下。</li>
+        <li><b>原始碼公開：</b>整個網站只有一個網頁檔，任何人都可以查看完整程式碼，學校資訊組長可以協助確認。</li>
+      </ol>
+    </div></div>
+    <details class="faq"><summary>常見問題</summary>
+      <dl>
+        <dt>顯示「這是全國版，請改傳學校版」？</dt><dd>上傳的 Word 檔是「全國各科試題分析」。請改用「學生成績相關資料」壓縮檔裡的各科試題分析（前言寫「所根據的資料是貴校報考…」的那份）。</dd>
+        <dt>有檔案顯示「無法辨識」？</dt><dd>網站只認得心測中心的會考學校報告（國民中學版）。其他 PDF 或 Word 檔會被略過，不影響分析。</dd>
+        <dt>只傳一個年份，為什麼分項能力有三年？</dt><dd>心測中心的「分項能力通過率分析」每年都附上近三年的數據，所以單一年份也能看三年變化。</dd>
+        <dt>上傳後會被別的學校看到嗎？</dt><dd>不會。每個人打開的網頁都是各自獨立的，資料只存在你自己的瀏覽器分頁裡，沒有任何地方會收集或彙整各校資料。</dd>
+        <dt>可以用手機嗎？</dt><dd>可以瀏覽，但上傳資料夾與列印建議用電腦（Chrome 或 Edge）。</dd>
+      </dl>
+    </details>
+  </div>
+  </details>
+</section>
+
+<section class="card" id="upload">
+  <h2>上傳資料</h2>
+  <div class="privacy"><b>🔒 資料不外流</b><span>檔案只在你自己的瀏覽器裡解析與計算，不會傳到任何伺服器；關閉或重新整理網頁後就會清除。<a href="#privacy" id="privLink">怎麼確定？</a></span></div>
+  <p class="lead">可以一次選整個資料夾，或選多個檔案，也可以直接拖曳進來。不用改檔名，網站會依檔案內容自動辨識年份與種類；上傳兩個以上年份就會自動跨年比較。</p>
+  <div class="drop" id="drop">
+    <div class="big">把會考報告檔案或資料夾拖曳到這裡</div>
+    <div class="btns">
+      <button type="button" id="btnFolder">選擇資料夾</button>
+      <button type="button" class="ghost" id="btnFiles">選擇檔案</button>
+      <button type="button" class="ghost hidden" id="btnClear">全部清除</button>
+    </div>
+    <input type="file" id="inFolder" webkitdirectory directory multiple>
+    <input type="file" id="inFiles" multiple accept=".pdf,.docx">
+  </div>
+  <div class="netbadge" id="netBadge"></div>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+  <div id="warnings"></div>
+  <div id="fileTableWrap" class="hidden">
+    <h3>已收到的檔案</h3>
+    <div class="table-scroll"><table id="checkTable"></table></div>
+    <details class="tablev"><summary>逐檔明細</summary><div class="table-scroll"><table id="fileTable"></table></div></details>
+  </div>
+
+</section>
+
+<div class="printonly printhead" id="printHead"></div>
+<div id="results" class="hidden">
+<nav class="tabs" aria-label="分析段落">
+  <a href="#sec-check">資料檢查</a><a href="#sec-basic">基本資料</a><a href="#sec-level">能力等級</a><a href="#sec-writing">寫作</a>
+  <a href="#sec-mean">平均通過率</a><a href="#sec-sub">分項能力</a><a href="#sec-items">逐題分析</a><a href="#sec-rule">判讀原則</a>
+  <a href="#" class="noprint" id="btnPrint" style="margin-left:auto">列印</a>
+</nav>
+
+<section class="card noprint" id="sec-check">
+  <h2>資料檢查</h2>
+  <p class="lead">檔案有缺漏或數字對不上時，網站仍會用現有的檔案繼續分析，並在這裡列出缺了什麼、影響哪些段落。</p>
+  <div id="checkBody"></div>
+</section>
+
+<section class="card" id="sec-basic">
+  <h2>學校基本資料與考生人數</h2>
+  <p class="lead" id="basicLead"></p>
+  <div class="stats" id="basicStats"></div>
+  <h3>各科有效人數</h3>
+  <p class="note">有效人數＝考生人數扣除缺考與重大違規。有上傳 Word 試題分析時採用其中寫明的人數，否則由等級百分比推算（標「≈」）。</p>
+  <div class="table-scroll"><table id="validTable" class="even"></table></div>
+</section>
+
+<section class="card" id="sec-level">
+  <h2>各科能力等級分布</h2>
+  <p class="lead">每一條是一年的考生：紅色待加強、黃色基礎、綠色精熟，合計 100%。右側標出待加強比例與前一年相比的增減。</p>
+  <div class="legend"><span><i style="background:var(--lv-low)"></i>待加強</span><span><i style="background:var(--lv-mid)"></i>基礎</span><span><i style="background:var(--lv-high)"></i>精熟</span></div>
+  <div class="grid2" id="levelCharts"></div>
+  <details class="tablev"><summary>以表格檢視</summary><div class="table-scroll"><table id="levelTable" class="even"></table></div></details>
+</section>
+
+<section class="card" id="sec-writing">
+  <h2>寫作測驗級分分布</h2>
+  <p class="lead">顏色越深代表級分越高。四級分以上的比例另列在數字卡片。</p>
+  <div class="stats" id="writingStats"></div>
+  <div class="legend" id="writingLegend" style="margin-top:1rem"></div>
+  <div class="chartbox" id="writingBox"><canvas id="writingChart"></canvas></div>
+  <details class="tablev"><summary>以表格檢視</summary><div class="table-scroll"><table id="writingTable" class="even"></table></div></details>
+</section>
+
+<section class="card" id="sec-mean">
+  <h2>各科平均通過率</h2>
+  <p class="lead">每科所有題目通過率的平均。每一列是一科：藍點本校、綠點縣市、橘點全國，灰線越長代表與全國差距越大；右側數字是「本校減全國」。</p>
+  <div class="legend"><span><i style="background:var(--s-school);border-radius:50%"></i>本校</span><span><i style="background:var(--s-cty);border-radius:50%"></i>縣市</span><span><i style="background:var(--s-nat);border-radius:50%"></i>全國</span></div>
+  <div class="grid3" id="meanCharts"></div>
+  <details class="tablev"><summary>看數字</summary><div class="table-scroll"><table id="meanTable" class="meantbl"></table></div></details>
+</section>
+
+<section class="card" id="sec-sub">
+  <h2>分項能力</h2>
+  <p class="lead" id="heatLead"></p>
+  <p class="warnbox" id="subSource" style="margin:0 0 .8rem"></p>
+  <div class="legend">
+    <span><i style="background:var(--gap0)"></i>差距 −0.22 以內</span>
+    <span><i style="background:var(--gap1)"></i>−0.23 到 −0.29</span>
+    <span><i style="background:var(--gap2)"></i>−0.30 以上</span>
+  </div>
+  <div class="patlegend">
+    <div><span class="pat pat-long">長期需求</span>三年差距都大（平均 −0.25 以下）且穩定：最值得長期經營</div>
+    <div><span class="pat pat-widen">差距連續擴大</span>三年一路變大（共 0.07 以上）：值得留意</div>
+    <div><span class="pat pat-narrow">差距連續縮小</span>三年一路變小（共 0.07 以上）：可作為成果</div>
+    <div><span class="pat pat-steady">差距穩定</span>三年起伏在 0.07 以內：維持並觀察</div>
+    <div><span class="pat pat-swing">起伏大</span>忽大忽小：受各屆學生與考題影響，不宜過度解讀</div>
+    <div class="pl-note">由上往下依序判斷，符合就停止；只看最近三年的「本校減全國」差距。</div>
+  </div>
+  <div class="heat compact" id="heat"></div>
+  <table id="patternLegend" class="hidden"></table>
+  <h3 style="margin-top:1.4rem">各分項多年表現</h3>
+  <p class="note">依領域分頁，每個分項一張小圖。標籤是依最近三年「本校減全國」差距的變化型態自動分類。</p>
+  <div class="legend"><span><i class="line" style="background:var(--s-school)"></i>本校</span><span><i class="line" style="background:var(--s-nat)"></i>全國</span></div>
+  <div id="subWrap"></div>
+</section>
+
+<section class="card" id="sec-items">
+  <h2>逐題分析</h2>
+  <p class="lead">每一題的本校與全國通過率、各選項的選答比例，並自動標出「高誘答選項」：超過三分之一的有效學生選了同一個錯誤選項，代表這個選項特別吸引學生、背後可能有共同的迷思。點任何一題可看題目內容。</p>
+  <div class="yrrow" id="itemYears"></div>
+  <div class="subtabs" id="itemTabs" role="tablist"></div>
+  <div id="itemsBody"></div>
+  <div id="printItems" class="printonly"></div>
+</section>
+
+<section class="card" id="sec-rule">
+  <h2>判讀原則</h2>
+  <ul class="principles" id="principles"></ul>
+</section>
+</div>
+</main>
+<div id="modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div id="modalBox"></div></div>
+<footer>本網站只在瀏覽器端運算，不保存、不傳送任何資料。資料來源：國立臺灣師範大學心理與教育測驗研究發展中心提供之各校會考報告。</footer>
+
+<script>// 會考數據分析：核心解析與計算（瀏覽器與 Node 共用，無外部相依）
+// 輸入：每頁的文字項目陣列 [{x,y,w,str}]，y 由下往上（pdf.js 座標）
+(function (root) {
+  'use strict';
+
+  const SUBJECTS = ['國文', '英語閱讀', '英語聽力', '數學', '社會', '自然'];
+  const NUM_RE = /^-?\d\.\d\d$/;
+
+  function strip(s) { return String(s).replace(/[\s　]+/g, ''); }
+
+  // 段落標題 → 科目代碼
+  function subjectId(raw) {
+    const s = strip(raw).replace(/[()]/g, m => (m === '(' ? '（' : '）'));
+    if (s.startsWith('國文')) return '國文';
+    if (s.includes('英語') && s.includes('閱讀')) return '英語閱讀';
+    if (s.includes('英語') && s.includes('聽力')) return '英語聽力';
+    if (s.startsWith('數學')) return '數學';
+    if (s.startsWith('社會')) return '社會';
+    if (s.startsWith('自然')) return '自然';
+    return null;
+  }
+
+  // 把同一行（y 相近）的文字項目合併
+  function toLines(items, tol) {
+    tol = tol == null ? 2.5 : tol;
+    const arr = items.filter(it => it.str && it.str.trim()).slice().sort((a, b) => b.y - a.y || a.x - b.x);
+    const lines = [];
+    for (const it of arr) {
+      let line = lines.length ? lines[lines.length - 1] : null;
+      if (!line || Math.abs(line.y - it.y) > tol) { line = { y: it.y, items: [] }; lines.push(line); }
+      line.items.push(it);
+    }
+    for (const l of lines) {
+      l.items.sort((a, b) => a.x - b.x);
+      l.text = joinItems(l.items);
+      l.flat = strip(l.text);
+    }
+    return lines;
+  }
+
+  function joinItems(items) {
+    let out = '';
+    let prev = null;
+    for (const it of items) {
+      const s = it.str.trim();
+      if (!s) continue;
+      if (prev) {
+        const gap = it.x - (prev.x + prev.w);
+        if (gap > 4) out += ' ';
+        else if (/[A-Za-z0-9]$/.test(out) && /^[A-Za-z0-9]/.test(s) && gap > 1) out += ' ';
+      }
+      out += s;
+      prev = it;
+    }
+    return out;
+  }
+
+  // 依 y 由上而下、同列由左而右，接成一段文字
+  function joinBlock(items) {
+    return joinItems(items.slice().sort((a, b) => (Math.abs(b.y - a.y) > 2.5 ? b.y - a.y : a.x - b.x)))
+      .replace(/\s+/g, ' ').trim()
+      .replace(/(?<=[一-鿿，。、；：「」（）])\s+(?=[一-鿿，。、；：「」（）])/g, '');
+  }
+
+  // ---------- 辨識檔案種類 ----------
+  function identifyPdf(pages) {
+    const first = strip(pages[0].map(i => i.str).join(''));
+    let m = first.match(/(\d{3})年國中教育會考全校學生成績報告/);
+    if (m) return { kind: 'report', year: +m[1] };
+    m = first.match(/(\d{3})年國中教育會考全校各科試題通過率分析/);
+    if (m) return { kind: 'itemrates', year: +m[1] };
+    m = first.match(/(\d{3})年國中教育會考全校各科分項能力通過率分析/);
+    if (m) return { kind: 'subskills', year: +m[1] };
+    return { kind: 'unknown' };
+  }
+
+  // Word 試題分析：從 document.xml 的純文字辨識
+  function identifyDocxText(text) {
+    const t = strip(text.slice(0, 3000));
+    const m = t.match(/(\d{3})年國中教育會考(國文|英語|數學|社會|自然)科試題分析(（閱讀）|（聽力）|\(閱讀\)|\(聽力\))?/);
+    if (!m) return { kind: 'unknown' };
+    let subject = m[2];
+    if (subject === '英語') subject = m[3] && m[3].includes('聽力') ? '英語聽力' : '英語閱讀';
+    const out = { kind: 'word', year: +m[1], subject, version: null };
+    let v;
+    if (/所根據的資料是貴校/.test(t)) out.version = 'school';
+    else if (/所根據的資料是報考/.test(t)) out.version = 'national';
+    if ((v = t.match(/貴校報考\d{3}年國中教育會考(\d+)位考生/))) out.examinees = +v[1];
+    if (out.version === 'school' && (v = t.match(/有效資料僅有([\d,]+)份/))) out.validN = +v[1].replace(/,/g, '');
+    return out;
+  }
+
+  function schoolInfo(lines) {
+    const info = {};
+    for (const l of lines) {
+      let m;
+      if ((m = l.flat.match(/學校代碼[:：](\d+)/))) info.code = m[1];
+      if ((m = l.flat.match(/學校名稱[:：](.+)$/))) info.name = m[1];
+      if ((m = l.flat.match(/考生人數[:：](\d+)人/))) info.examinees = +m[1];
+      if ((m = l.flat.match(/縣市別[:：](.+)$/))) info.county = m[1];
+    }
+    return info;
+  }
+
+  // ---------- 全校學生成績報告 ----------
+  function parseReport(pages) {
+    const lines = toLines(pages[0]);
+    const info = schoolInfo(lines);
+    const levels = {};
+    let writing = null;
+    let inLevels = false;
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      const f = l.flat;
+      if (f.includes('各科能力等級')) { inLevels = true; continue; }
+      if (f.includes('零級分')) {
+        inLevels = false;
+        for (let j = i + 1; j < Math.min(lines.length, i + 4); j++) {
+          const nums = lines[j].flat.length ? (lines[j].text.match(/\d+\.\d+/g) || []) : [];
+          if (nums.length >= 7) { writing = nums.slice(0, 7).map(Number); break; }
+        }
+        continue;
+      }
+      if (!inLevels) continue;
+      const nums = (l.text.match(/\d+\.\d+/g) || []).map(Number);
+      if (!nums.length) continue;
+      let key = null;
+      if (f.includes('國文')) key = '國文';
+      else if (f.includes('整體能力')) key = '英語整體';
+      else if (f.includes('閱讀')) key = '英語閱讀';
+      else if (f.includes('聽力')) key = '英語聽力';
+      else if (f.includes('數學')) key = '數學';
+      else if (f.includes('社會')) key = '社會';
+      else if (f.includes('自然')) key = '自然';
+      if (key) levels[key] = [nums[0], nums[1], nums.length > 2 ? nums[2] : null];
+    }
+    return { info, levels, writing };
+  }
+
+  // 由百分比推算有效人數：不超過考生人數、且所有百分比都能整除的最大人數
+  function inferValidN(pcts, max) {
+    const vals = pcts.filter(v => v != null);
+    if (!max) return null;
+    for (let n = max; n >= 1; n--) {
+      if (vals.every(p => Math.abs(Math.round(p * n / 100) * 100 / n - p) < 0.006)) {
+        return n;
+      }
+    }
+    return null;
+  }
+
+  // ---------- 全校各科試題通過率分析 ----------
+  function parseItemRates(pages) {
+    const info = schoolInfo(toLines(pages[0]));
+    const subjects = {}; // id -> {label, items:[]}
+    let current = null;
+    for (const page of pages) {
+      const lines = toLines(page);
+      const hdrSec = lines.find(l => /【.+各題通過率分析結果】/.test(l.flat));
+      if (hdrSec) {
+        const m = hdrSec.flat.match(/【(.+?)各題通過率分析結果】/);
+        const id = subjectId(m[1]);
+        if (id) { current = id; subjects[id] = subjects[id] || { label: m[1], items: [] }; }
+      }
+      const hdr = lines.find(l => l.flat.startsWith('題序') && l.flat.includes('貴校'));
+      if (!hdr || !current) continue;
+      const col = name => hdr.items.find(it => strip(it.str) === name);
+      const cNo = col('題序'), cSk = col('分項能力'), cObj = col('評量目標');
+      const cNat = col('全國'), cCty = col('縣市'), cSch = col('貴校');
+      if (!cNo || !cNat || !cSch) continue;
+      const body = page.filter(it => it.str.trim() && it.y < hdr.y - 2 && it.y > 45);
+      const anchors = body.filter(it => /^\d{1,2}$/.test(it.str.trim()) && it.x < cNo.x + cNo.w + 8 && it.x > cNo.x - 12)
+        .sort((a, b) => b.y - a.y);
+      if (!anchors.length) continue;
+      const near = (it, c) => c && Math.abs((it.x + it.w / 2) - (c.x + c.w / 2)) < 16;
+      const isNum = it => NUM_RE.test(it.str.trim()) || /^[-－–]$/.test(it.str.trim());
+      const numItems = body.filter(it => isNum(it) && (near(it, cNat) || near(it, cCty) || near(it, cSch)));
+      const lastAnchor = anchors[anchors.length - 1];
+      const textItems = body.filter(it => !anchors.includes(it) && !numItems.includes(it) && it.x < cNat.x - 4 &&
+        it.y > lastAnchor.y - 40);
+      // 找評量目標欄左緣：每行若有兩段文字，第二段的起點
+      const starts = [];
+      for (const l of toLines(textItems)) {
+        let prev = null;
+        for (const it of l.items) {
+          if (prev && it.x - (prev.x + prev.w) > 6) { starts.push(Math.round(it.x)); break; }
+          prev = it;
+        }
+      }
+      let objEdge = cObj ? cObj.x - 60 : cNat.x;
+      if (starts.length) {
+        const cnt = {};
+        starts.forEach(s => { cnt[s] = (cnt[s] || 0) + 1; });
+        objEdge = +Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] - 2;
+      }
+      const rows = anchors.map(a => ({ no: +a.str.trim(), y: a.y, sk: [], obj: [], nums: {} }));
+      const nearestRow = it => {
+        let best = null, bd = 1e9;
+        for (const r of rows) { const d = Math.abs(r.y - it.y); if (d < bd) { bd = d; best = r; } }
+        return best;
+      };
+      for (const it of textItems) {
+        const r = nearestRow(it);
+        (it.x >= objEdge ? r.obj : r.sk).push(it);
+      }
+      for (const it of numItems) {
+        const r = nearestRow(it);
+        if (Math.abs(r.y - it.y) > 4) continue;
+        const v = NUM_RE.test(it.str.trim()) ? parseFloat(it.str) : null;
+        if (near(it, cNat)) r.nums.nat = v; else if (near(it, cCty)) r.nums.cty = v; else if (near(it, cSch)) r.nums.sch = v;
+      }
+      for (const r of rows) {
+        subjects[current].items.push({
+          no: r.no, skill: joinBlock(r.sk), objective: joinBlock(r.obj),
+          nat: r.nums.nat ?? null, cty: r.nums.cty ?? null, sch: r.nums.sch ?? null,
+        });
+      }
+    }
+    for (const id in subjects) subjects[id].items.sort((a, b) => a.no - b.no);
+    return { info, subjects };
+  }
+
+  // 一行裡的數字（負號可能是獨立的文字項目）
+  function numTokens(items) {
+    const out = [];
+    for (let i = 0; i < items.length; i++) {
+      const s = items[i].str.trim().replace(/[−－–]/g, '-');
+      if (NUM_RE.test(s)) { out.push({ x: items[i].x, v: parseFloat(s) }); continue; }
+      if (s === '-' && items[i + 1] && /^\d\.\d\d$/.test(items[i + 1].str.trim()) &&
+          items[i + 1].x - (items[i].x + items[i].w) < 3) {
+        out.push({ x: items[i].x, v: -parseFloat(items[i + 1].str) }); i++;
+      }
+    }
+    return out;
+  }
+
+  // ---------- 全校各科分項能力通過率分析 ----------
+  function parseSubskills(pages) {
+    const info = schoolInfo(toLines(pages[0]));
+    const subjects = {}; // id -> {years:[y1,y2,y3], rows:[{name, sch:[], nat:[], gap:[]}]}
+    for (const page of pages) {
+      const lines = toLines(page);
+      const secIdx = lines.findIndex(l => /【.+各分項能力通過率分析結果】/.test(l.flat));
+      if (secIdx < 0) continue;
+      const m = lines[secIdx].flat.match(/【(.+?)各分項能力通過率分析結果】/);
+      const id = subjectId(m[1]);
+      if (!id) continue;
+      const secY = lines[secIdx].y;
+      // 年份標題
+      const yearItems = page.filter(it => /^\d{3}$/.test(it.str.trim()) && it.y < secY && it.y > secY - 50)
+        .sort((a, b) => a.x - b.x);
+      const years = [];
+      yearItems.forEach(it => { const y = +it.str.trim(); if (!years.includes(y)) years.push(y); });
+      const below = lines.filter(l => l.y < secY);
+      const dataLines = below.filter(l => numTokens(l.items).length >= 9);
+      if (!dataLines.length) continue;
+      const firstNumX = Math.min(...dataLines.map(l => numTokens(l.items)[0].x));
+      const hdrBottom = Math.min(...page.filter(it => strip(it.str) === '貴校' && it.y < secY).map(it => it.y));
+      const nameItems = page.filter(it => it.str.trim() && it.x < firstNumX - 4 && it.y < hdrBottom - 3 &&
+        it.y > dataLines[dataLines.length - 1].y - 30 && it.y > 45);
+      const rows = dataLines.map(l => ({ y: l.y, names: [], nums: numTokens(l.items).map(t => t.v) }));
+      for (const it of nameItems) {
+        let best = null, bd = 1e9;
+        for (const r of rows) { const d = Math.abs(r.y - it.y); if (d < bd) { bd = d; best = r; } }
+        best.names.push(it);
+      }
+      subjects[id] = {
+        years,
+        rows: rows.map(r => {
+          const n = r.nums;
+          return {
+            name: strip(joinBlock(r.names)),
+            sch: [n[0], n[3], n[6]], nat: [n[1], n[4], n[7]], gap: [n[2], n[5], n[8]],
+          };
+        }),
+      };
+    }
+    return { info, subjects };
+  }
+
+  // ---------- 判讀規則 ----------
+  const r2 = v => Math.round(v * 100) / 100;
+  // g: 依年份由舊到新的三個差距
+  function gapPattern(g) {
+    const [a, b, c] = g;
+    const rng = r2(Math.max(a, b, c) - Math.min(a, b, c));
+    const mean = (a + b + c) / 3;
+    if (a >= b && b >= c && r2(a - c) >= 0.07) return 'widen';
+    if (a <= b && b <= c && r2(c - a) >= 0.07) return 'narrow';
+    if (rng <= 0.07 && mean <= -0.25) return 'long';
+    if (rng <= 0.07) return 'steady';
+    return 'swing';
+  }
+  const PATTERN_LABEL = { long: '長期需求', widen: '差距連續擴大', narrow: '差距連續縮小', swing: '起伏大', steady: '差距穩定' };
+  const PATTERN_DESC = {
+    long: '三年差距都偏大且穩定：不同屆學生都卡在這裡，是本校學生的長期學習需求，值得長期經營。',
+    widen: '三年差距一路擴大：方向一致，值得留意；但每屆人數少，仍需用段考持續觀察。',
+    narrow: '三年差距一路縮小：方向一致，可作為成果說明。',
+    swing: '三年差距忽大忽小：主要受各屆學生組成與考題影響，單一年的高低不宜過度解讀。',
+    steady: '三年差距穩定、幅度中等：維持現有教學並持續觀察。',
+  };
+  // 差距顏色等級：0 淺、1 中、2 深
+  function gapLevel(g) {
+    if (g == null) return null;
+    const v = r2(g);
+    if (v <= -0.30) return 2;
+    if (v <= -0.23) return 1;
+    return 0;
+  }
+
+  // 分項能力名稱縮寫（顯示用）
+  const SHORT = {
+    '具備基本的自然科學知識與概念': '基本知識與概念',
+    '解決科學問題所需的推論與應用能力': '推論與應用能力',
+    '進行科學探究活動所需的規劃、執行與數據分析能力': '探究規劃與數據分析',
+    '轉譯以不同方式呈現的社會領域相關資料': '轉譯不同方式呈現的資料',
+    '擷取訊息加以比較或作出合理推論': '擷取訊息比較或推論',
+  };
+  const shortName = n => SHORT[n] || n;
+
+  // ---------- 彙整多份檔案 ----------
+  // files: [{kind, year, data}]
+  function aggregate(files) {
+    const out = { school: {}, years: [], reports: {}, itemRates: {}, subskills: {}, warnings: [] };
+    const years = new Set();
+    const codes = new Set();
+    for (const f of files) {
+      const info = f.data.info || {};
+      if (info.code) { codes.add(info.code); out.school.code = info.code; }
+      if (info.name) out.school.name = info.name;
+      if (info.county) out.school.county = info.county;
+      if (f.kind === 'report') { out.reports[f.year] = f.data; years.add(f.year); }
+      if (f.kind === 'itemrates') { out.itemRates[f.year] = f.data; years.add(f.year); }
+    }
+    if (codes.size > 1) out.warnings.push('上傳的檔案來自不同學校（學校代碼：' + [...codes].join('、') + '），請確認。');
+
+    // 分項能力：多份報告串成長序列，同一年份以較新的報告為準
+    const subFiles = files.filter(f => f.kind === 'subskills').sort((a, b) => a.year - b.year);
+    const sub = {}; // id -> name -> year -> {sch,nat,gap}
+    for (const f of subFiles) {
+      years.add(f.year);
+      for (const id in f.data.subjects) {
+        const s = f.data.subjects[id];
+        sub[id] = sub[id] || {};
+        for (const row of s.rows) {
+          sub[id][row.name] = sub[id][row.name] || {};
+          s.years.forEach((y, k) => { sub[id][row.name][y] = { sch: row.sch[k], nat: row.nat[k], gap: row.gap[k] }; });
+        }
+      }
+    }
+    const order = [];
+    for (const f of subFiles.slice().reverse()) for (const id in f.data.subjects)
+      for (const row of f.data.subjects[id].rows) if (!order.some(o => o.id === id && o.name === row.name)) order.push({ id, name: row.name });
+    for (const id of SUBJECTS) {
+      if (!sub[id]) continue;
+      const names = order.filter(o => o.id === id).map(o => o.name);
+      out.subskills[id] = names.map(name => {
+        const series = sub[id][name];
+        const ys = Object.keys(series).map(Number).sort((a, b) => a - b);
+        const last3 = ys.slice(-3);
+        const pat = last3.length === 3 ? gapPattern(last3.map(y => series[y].gap)) : null;
+        return { name, short: shortName(name), years: ys, series, patternYears: last3, pattern: pat,
+          latestGap: series[ys[ys.length - 1]].gap };
+      });
+    }
+    out.years = [...years].sort((a, b) => a - b);
+
+    // 各科平均通過率
+    out.meanRates = {};
+    for (const y in out.itemRates) {
+      out.meanRates[y] = {};
+      for (const id in out.itemRates[y].subjects) {
+        const items = out.itemRates[y].subjects[id].items;
+        const avg = k => { const v = items.map(i => i[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+        const nat = avg('nat'), cty = avg('cty'), sch = avg('sch');
+        out.meanRates[y][id] = { n: items.length, nat, cty, sch,
+          gapNat: sch != null && nat != null ? sch - nat : null, gapCty: sch != null && cty != null ? sch - cty : null };
+      }
+    }
+    // 有效人數：優先用 Word 試題分析寫明的人數，否則由等級百分比推算
+    out.validN = {};
+    out.validSource = {};
+    for (const y in out.reports) {
+      const r = out.reports[y];
+      out.validN[y] = {}; out.validSource[y] = {};
+      for (const k in r.levels) { out.validN[y][k] = inferValidN(r.levels[k], r.info.examinees); out.validSource[y][k] = '推算'; }
+    }
+    for (const f of files) {
+      if (f.kind === 'word' && f.data && f.data.validN) {
+        out.validN[f.year] = out.validN[f.year] || {}; out.validSource[f.year] = out.validSource[f.year] || {};
+        out.validN[f.year][f.data.subject] = f.data.validN; out.validSource[f.year][f.data.subject] = 'Word';
+        if (f.data.subject === '英語閱讀' && out.validN[f.year]['英語整體'] == null) out.validN[f.year]['英語整體'] = f.data.validN;
+      }
+    }
+    return out;
+  }
+
+  const api = { SUBJECTS, strip, subjectId, toLines, identifyPdf, identifyDocxText, parseReport, parseItemRates, parseSubskills,
+    gapPattern, gapLevel, PATTERN_LABEL, PATTERN_DESC, shortName, inferValidN, aggregate };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.KaoCore = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>// 會考 Word 試題分析解析＋MathType WMF 轉 SVG（瀏覽器與 Node 共用）
+// parseWordDoc(xmlDoc, rels, media) — xmlDoc 為 DOM（瀏覽器 DOMParser 或 xmldom）
+(function (root) {
+  'use strict';
+
+  const kids = (n, name) => {
+    const out = [];
+    for (let c = n.firstChild; c; c = c.nextSibling) if (c.nodeType === 1 && (!name || c.localName === name)) out.push(c);
+    return out;
+  };
+  const attr = (n, q) => (n && n.getAttribute(q)) || '';
+  const find = (n, name) => {
+    const st = [n];
+    while (st.length) {
+      const x = st.pop();
+      for (let c = x.lastChild; c; c = c.previousSibling) if (c.nodeType === 1) { if (c.localName === name) return c; st.push(c); }
+    }
+    return null;
+  };
+  const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+
+  // ---- 純文字 ----
+  function text(n) {
+    let s = '';
+    const walk = x => {
+      for (let c = x.firstChild; c; c = c.nextSibling) {
+        if (c.nodeType !== 1) continue;
+        const ln = c.localName;
+        if (ln === 't') s += c.textContent;
+        else if (ln === 'tab') s += ' ';
+        else if (ln === 'br' || ln === 'cr') s += '\n';
+        else { walk(c); if (ln === 'p') s += '\n'; }
+      }
+    };
+    walk(n);
+    return s.replace(/\n+$/, '').trim();
+  }
+
+  // ---- 表格轉格線 ----
+  function grid(tbl) {
+    const rows = [];
+    for (const tr of kids(tbl, 'tr')) {
+      let col = 0;
+      const cells = [];
+      for (const tc of kids(tr, 'tc')) {
+        const pr = kids(tc, 'tcPr')[0];
+        const gs = pr && kids(pr, 'gridSpan')[0];
+        const span = gs ? (+attr(gs, 'w:val') || 1) : 1;
+        cells.push({ col, span, tc, text: text(tc) });
+        col += span;
+      }
+      rows.push(cells);
+    }
+    return rows;
+  }
+  const at = (row, col) => row.find(c => col >= c.col && col < c.col + c.span);
+  const flat = s => String(s).replace(/[\s　]+/g, '');
+  const num = s => { const v = parseFloat(String(s).replace(/,/g, '')); return isNaN(v) ? null : v; };
+
+  // ---- 儲存格轉 HTML（含圖片、上下標、內嵌表格）----
+  function cellHtml(tc, ctx) {
+    let html = '';
+    for (const c of kids(tc)) {
+      if (c.localName === 'p') html += paraHtml(c, ctx);
+      else if (c.localName === 'tbl') html += tableHtml(c, ctx);
+      else if (c.localName === 'sdt') { const sc = kids(c, 'sdtContent')[0]; if (sc) html += cellHtml(sc, ctx); }
+    }
+    return html;
+  }
+  function tableHtml(tbl, ctx) {
+    let h = '<table class="qtable">';
+    for (const tr of kids(tbl, 'tr')) {
+      h += '<tr>';
+      for (const tc of kids(tr, 'tc')) {
+        const pr = kids(tc, 'tcPr')[0];
+        const gs = pr && kids(pr, 'gridSpan')[0];
+        const vm = pr && kids(pr, 'vMerge')[0];
+        if (vm && attr(vm, 'w:val') !== 'restart') { h += '<td class="vm"></td>'; continue; }
+        h += `<td${gs ? ` colspan="${attr(gs, 'w:val')}"` : ''}>${cellHtml(tc, ctx)}</td>`;
+      }
+      h += '</tr>';
+    }
+    return h + '</table>';
+  }
+  function paraHtml(p, ctx) {
+    let inner = '';
+    const runs = n => {
+      for (const c of kids(n)) {
+        const ln = c.localName;
+        if (ln === 'r') inner += runHtml(c, ctx);
+        else if (ln === 'hyperlink' || ln === 'smartTag' || ln === 'ins' || ln === 'fldSimple') runs(c);
+        else if (ln === 'sdt') { const sc = kids(c, 'sdtContent')[0]; if (sc) runs(sc); }
+        else if (ln === 'oMath' || ln === 'oMathPara') inner += `<span class="omath">${esc(text(c))}</span>`;
+      }
+    };
+    runs(p);
+    return `<p>${inner || '&nbsp;'}</p>`;
+  }
+  function runHtml(r, ctx) {
+    const pr = kids(r, 'rPr')[0];
+    let pre = '', post = '';
+    if (pr) {
+      const va = kids(pr, 'vertAlign')[0];
+      if (va && attr(va, 'w:val') === 'superscript') { pre += '<sup>'; post = '</sup>' + post; }
+      if (va && attr(va, 'w:val') === 'subscript') { pre += '<sub>'; post = '</sub>' + post; }
+      const u = kids(pr, 'u')[0];
+      if (u && attr(u, 'w:val') !== 'none') { pre += '<u>'; post = '</u>' + post; }
+      const b = kids(pr, 'b')[0];
+      if (b && attr(b, 'w:val') !== '0' && attr(b, 'w:val') !== 'false') { pre += '<b>'; post = '</b>' + post; }
+    }
+    let s = '';
+    for (const c of kids(r)) {
+      const ln = c.localName;
+      if (ln === 't') s += esc(c.textContent).replace(/ {2}/g, ' &nbsp;');
+      else if (ln === 'tab') s += '&emsp;';
+      else if (ln === 'br' || ln === 'cr') s += '<br>';
+      else if (ln === 'drawing' || ln === 'pict' || ln === 'object' || ln === 'AlternateContent') s += imgHtml(c, ctx);
+      else if (ln === 'sym') s += esc(symMap(parseInt(attr(c, 'w:char'), 16) & 0xFF));
+    }
+    return s ? pre + s + post : '';
+  }
+  function imgHtml(n, ctx) {
+    // 依文件順序收集：圖片（a:blip、v:imagedata）與文字方塊（w:txbxContent）；AlternateContent 只取 Choice
+    const parts = [];
+    const visit = x => {
+      for (let c = x.firstChild; c; c = c.nextSibling) {
+        if (c.nodeType !== 1) continue;
+        const ln = c.localName;
+        if (ln === 'Fallback') continue;
+        if (ln === 'AlternateContent') { const ch = kids(c, 'Choice')[0]; if (ch) visit(ch); continue; }
+        if (ln === 'txbxContent') { parts.push({ t: 'box', node: c }); continue; }
+        if (ln === 'blip') { const rid = attr(c, 'r:embed') || attr(c, 'r:link'); if (rid) parts.push({ t: 'img', rid, node: c }); }
+        else if (ln === 'imagedata') { const rid = attr(c, 'r:id'); if (rid) parts.push({ t: 'img', rid, node: c }); }
+        visit(c);
+      }
+    };
+    if (n.localName === 'AlternateContent') { const ch = kids(n, 'Choice')[0]; if (ch) visit(ch); } else visit(n);
+    if (!parts.length) return '';
+    const isObj = n.localName === 'object';
+    const imgs = parts.filter(p => p.t === 'img');
+    // 整體尺寸
+    let W = null, H = null;
+    const ext = find(n, 'extent');
+    if (ext) { W = +attr(ext, 'cx') / 9525; H = +attr(ext, 'cy') / 9525; }
+    const PT = { pt: 1, in: 72, cm: 28.3465, mm: 2.83465, px: 0.75, pc: 12 };
+    const vlen = (stl, k) => { const m = stl.match(new RegExp('(?:^|;)\\s*' + k + ':\\s*([\\d.]+)(pt|in|cm|mm|px|pc)?')); return m ? +m[1] * PT[m[2] || 'px'] * 4 / 3 : null; };
+    if (!ext) {
+      const shp = find(n, 'shape') || find(n, 'rect') || find(n, 'group');
+      if (shp) { const stl = attr(shp, 'style'); W = vlen(stl, 'width'); H = vlen(stl, 'height'); }
+    }
+    if ((!W || !H) && isObj) { W = +attr(n, 'w:dxaOrig') / 15 || W; H = +attr(n, 'w:dyaOrig') / 15 || H; }
+    // 群組：子圖依群組座標比例縮放
+    const grp = find(n, 'grpSpPr');
+    let scale = null;
+    if (grp && W) { const chExt = find(grp, 'chExt'); if (chExt && +attr(chExt, 'cx')) scale = W / (+attr(chExt, 'cx') / 9525); }
+    let out = '';
+    for (const p of parts) {
+      if (p.t === 'box') {
+        const inner = cellHtml(p.node, ctx);
+        const plain = inner.replace(/<[^>]+>|&nbsp;|&emsp;/g, '').replace(/\s+/g, '');
+        if (/^&(amp;)?/.test(plain)) { out += `<div class="gloss">${inner.replace(/&amp;/, '')}</div>`; continue; }
+        if (/<img/.test(inner)) out += `<span class="txfig">${inner}</span>`;
+        else if (!plain) continue;
+        else if (plain.length <= 16) out += `<span class="figcap">${plain}</span>`;
+        else out += `<div class="txbox">${inner}</div>`;
+        continue;
+      }
+      const target = ctx.rels[p.rid];
+      const m = target ? ctx.media(target) : null;
+      if (!m) { out += '<span class="noimg">［圖］</span>'; continue; }
+      ctx.images++;
+      let w = null, h = null;
+      if (imgs.length === 1 && !find(n, 'txbxContent')) { w = W; h = H; }
+      else {
+        // 個別圖片尺寸：pic 的 a:xfrm/a:ext 或 VML 自身 style
+        let q = p.node.parentNode, e = null;
+        for (let k = 0; k < 4 && q && !e; k++, q = q.parentNode) { const sp = kids(q, 'spPr')[0]; const xf = sp && kids(sp, 'xfrm')[0]; e = xf && kids(xf, 'ext')[0]; }
+        if (e) { w = +attr(e, 'cx') / 9525 * (scale || 1); h = +attr(e, 'cy') / 9525 * (scale || 1); }
+        else if (p.node.parentNode && attr(p.node.parentNode, 'style')) { const stl = attr(p.node.parentNode, 'style'); w = vlen(stl, 'width'); h = vlen(stl, 'height'); }
+      }
+      const k = isObj ? 1.25 : 1;
+      const sz = w && h ? ` style="width:${(w * k).toFixed(1)}px;height:${(h * k).toFixed(1)}px"` : '';
+      out += `<img class="${isObj ? 'eq' : 'fig'}" src="${m.url}"${sz} alt="${isObj ? '算式' : '題目圖片'}">`;
+    }
+    return imgs.length > 1 && !isObj ? `<span class="figgroup">${out}</span>` : out;
+  }
+
+  // 整理：去掉排版用的空白段落；把圖說（圖(一)…）移到最後一張圖的後面
+  function tidy(html) {
+    let h = html.replace(/(<p>(?:&nbsp;|\s|<br>)*<\/p>)+/g, '');
+    const caps = [];
+    h = h.replace(/<span class="figcap">([^<]*)<\/span>/g, (m, t) => { caps.push(t); return ''; });
+    if (caps.length) {
+      const capHtml = `<div class="figcaps">${caps.map(c => `<span>${c}</span>`).join('')}</div>`;
+      const idx = h.lastIndexOf('<img class="fig"');
+      if (idx >= 0) { const end = h.indexOf('>', idx) + 1; let after = end; const close = h.slice(end).match(/^(<\/span>)+/); if (close) after += close[0].length; h = h.slice(0, after) + capHtml + h.slice(after); }
+      else h += capHtml;
+    }
+    return h;
+  }
+
+  // ---- 解析整份 Word ----
+  const PASSAGE_RE = /第\s*(\d+)\s*[-~～－–]\s*(\d+)\s*題\s*選文/;
+  function parseWordDoc(doc, rels, media) {
+    const ctx = { rels, media, images: 0 };
+    const body = find(doc, 'body');
+    const tables = kids(body, 'tbl');
+    const res = { items: [], openEnded: [], passages: [], summary: {}, summaryOpen: {} };
+    for (const tbl of tables) {
+      const g = grid(tbl);
+      if (!g.length) continue;
+      const head = flat(g[0].map(c => c.text).join(''));
+      // 總表
+      if (/^(選擇題)?題號群體/.test(head) || head === '選擇題' || head === '非選擇題') {
+        const open = head.startsWith('非選擇題');
+        let cur = null;
+        for (const row of g) {
+          const c0 = at(row, 0), c1 = at(row, 1);
+          if (c0 && /^\d+$/.test(flat(c0.text))) cur = +flat(c0.text);
+          if (!cur || !c1) continue;
+          const grp = flat(c1.text);
+          const vals = row.filter(c => c.col >= 2).map(c => num(c.text));
+          const tgt = open ? res.summaryOpen : res.summary;
+          tgt[cur] = tgt[cur] || {};
+          tgt[cur][grp] = open ? { avg: vals[0], disc: vals[1] } : { p: vals[0], disc: vals[1], pct: { A: vals[2], B: vals[3], C: vals[4], D: vals[5] } };
+        }
+        continue;
+      }
+      // 題組選文
+      const pm = head.match(PASSAGE_RE);
+      if (pm && !/題目|錄音稿/.test(flat(g[1] ? g[1].map(c => c.text).join('') : ''))) {
+        let html = '';
+        const firstTc = g[0][0].tc;
+        // 標題之後的內容（可能在同一儲存格內的後續段落，或後續列）
+        const ps = kids(firstTc).filter(x => x.localName === 'p' || x.localName === 'tbl');
+        ps.forEach((p, i) => { if (i > 0 || !PASSAGE_RE.test(text(p))) html += p.localName === 'p' ? paraHtml(p, ctx) : tableHtml(p, ctx); });
+        for (const row of g.slice(1)) for (const c of row) html += cellHtml(c.tc, ctx);
+        res.passages.push({ from: +pm[1], to: +pm[2], html: tidy(html) });
+        continue;
+      }
+      const im = flat(g[0].map(c => c.text).join('')).match(/第(\d+)題/);
+      if (!im) continue;
+      const no = +im[1];
+      const it = { no, stemHtml: '', transcriptHtml: '', objective: '', answer: null, groups: {}, dist: {}, distByGroup: {}, N: null };
+      let isOpen = false, hdr = null;
+      for (let ri = 1; ri < g.length; ri++) {
+        const row = g[ri];
+        const c0 = row[0];
+        const t0 = flat(c0 ? c0.text : '');
+        const rest = row.filter(c => c !== c0);
+        if (t0 === '題目' || t0 === '錄音稿') {
+          const h = rest.map(c => cellHtml(c.tc, ctx)).join('');
+          if (t0 === '題目') it.stemHtml += h; else it.transcriptHtml += h;
+          continue;
+        }
+        if (/^評量目標[:：]/.test(t0)) { it.objective = c0.text.replace(/^\s*評量目標[:：]\s*/, '').trim(); continue; }
+        if (/評分結果/.test(t0)) { isOpen = true; continue; }
+        const rowFlat = row.map(c => flat(c.text));
+        if (!hdr && rowFlat.includes('全體') && (rowFlat.includes('基礎') || rowFlat.includes('待加強'))) {
+          hdr = {};
+          for (const c of row) { const f = flat(c.text); if (['全體', '精熟', '基礎', '待加強'].includes(f)) hdr[f] = c.col; }
+          continue;
+        }
+        if (!hdr) continue;
+        // 正答列／平均得分列：第一格是 A–D（選擇題）或空白（非選擇題），全體欄是小數
+        const vAll = at(row, hdr['全體']);
+        if (it.answer === null && !it._statDone && vAll && /^-?\d\.\d+$/.test(flat(vAll.text)) && (/^[A-D]$/.test(t0) || (isOpen && t0 === ''))) {
+          if (/^[A-D]$/.test(t0)) it.answer = t0;
+          for (const k in hdr) {
+            const c = at(row, hdr[k]);
+            it.groups[k] = { v: c ? num(c.text) : null };
+          }
+          const d = at(row, hdr['全體'] + 1);
+          it.disc = d ? num(d.text) : null;
+          it._statDone = true;
+          continue;
+        }
+        // 選項列與級分列
+        const lab = flat((at(row, 1) || {}).text || '');
+        const key = /^[A-D]$/.test(lab) ? lab : lab === '未作答' ? '未作答' : lab === '複選' ? '複選' : lab === '全體' ? '全體' :
+          /^零級分\(未作答\)$/.test(lab) ? '0未' : /^零級分\(有作答\)$/.test(lab) ? '0' : /^一級分$/.test(lab) ? '1' : /^二級分$/.test(lab) ? '2' : /^三級分$/.test(lab) ? '3' : null;
+        if (!key) continue;
+        for (const k in hdr) {
+          const cn = at(row, hdr[k]), cp = at(row, hdr[k] + 1);
+          const n = cn ? num(cn.text) : null, p = cp && cp !== cn ? num(cp.text) : null;
+          it.distByGroup[k] = it.distByGroup[k] || {};
+          it.distByGroup[k][key] = { n, pct: p };
+        }
+      }
+      delete it._statDone;
+      it.stemHtml = tidy(it.stemHtml); it.transcriptHtml = tidy(it.transcriptHtml);
+      const all = it.distByGroup['全體'] || {};
+      it.N = all['全體'] ? all['全體'].n : null;
+      for (const k in all) if (k !== '全體') it.dist[k] = all[k].n;
+      it.p = it.groups['全體'] ? it.groups['全體'].v : null;
+      if (isOpen) { it.avg = it.p; delete it.p; delete it.answer; res.openEnded.push(it); }
+      else res.items.push(it);
+    }
+    // 題組選文對應
+    for (const it of res.items) {
+      const ps = res.passages.find(p => it.no >= p.from && it.no <= p.to);
+      if (ps) it.passage = ps.from + '-' + ps.to;
+      // 正答若沒抓到，用總表推回
+      if (!it.answer && res.summary[it.no] && res.summary[it.no]['全體']) {
+        const s = res.summary[it.no]['全體'];
+        const hit = Object.keys(s.pct).filter(k => s.pct[k] != null && Math.abs(s.pct[k] - s.p * 100) < 0.01);
+        if (hit.length === 1) it.answer = hit[0];
+      }
+    }
+    res.imageCount = ctx.images;
+    return res;
+  }
+
+  function parseRels(xml) {
+    const out = {};
+    const re = /<Relationship\b[^>]*>/g;
+    let m;
+    while ((m = re.exec(xml))) {
+      const id = (m[0].match(/\bId="([^"]+)"/) || [])[1];
+      const t = (m[0].match(/\bTarget="([^"]+)"/) || [])[1];
+      if (id && t) out[id] = t.replace(/^\/?word\//, '');
+    }
+    return out;
+  }
+
+  // ---- MathType WMF → SVG ----
+  const SYM = {
+    0x2D: '−', 0x2A: '∗', 0x22: '∀', 0x24: '∃', 0x27: '∋', 0x40: '≅', 0x5C: '∴', 0x5E: '⊥', 0x60: '‾',
+    0xA2: '′', 0xA3: '≤', 0xA4: '⁄', 0xA5: '∞', 0xB0: '°', 0xB1: '±', 0xB2: '″', 0xB3: '≥', 0xB4: '×', 0xB5: '∝', 0xB6: '∂', 0xB7: '•', 0xB8: '÷',
+    0xB9: '≠', 0xBA: '≡', 0xBB: '≈', 0xBC: '…', 0xBE: '―', 0xAE: '→', 0xAC: '←', 0xAD: '↑', 0xAF: '↓', 0xAB: '↔',
+    0xC6: '∅', 0xC7: '∩', 0xC8: '∪', 0xCC: '⊂', 0xCE: '∈', 0xCF: '∉', 0xD0: '∠', 0xD1: '∇', 0xD6: '√', 0xD7: '⋅', 0xD9: '∧', 0xDA: '∨',
+    0xDB: '⇔', 0xDE: '⇒', 0xE1: '〈', 0xF1: '〉', 0xF2: '∫', 0xE5: '∑',
+    0xE6: '⎛', 0xE7: '⎜', 0xE8: '⎝', 0xE9: '⎡', 0xEA: '⎢', 0xEB: '⎣', 0xEC: '⎧', 0xED: '⎨', 0xEE: '⎩', 0xEF: '⎪',
+    0xF6: '⎞', 0xF7: '⎟', 0xF8: '⎠', 0xF9: '⎤', 0xFA: '⎥', 0xFB: '⎦', 0xFC: '⎫', 0xFD: '⎬', 0xFE: '⎭',
+    0x61: 'α', 0x62: 'β', 0x63: 'χ', 0x64: 'δ', 0x65: 'ε', 0x66: 'φ', 0x67: 'γ', 0x68: 'η', 0x69: 'ι', 0x6A: 'ϕ', 0x6B: 'κ', 0x6C: 'λ', 0x6D: 'μ',
+    0x6E: 'ν', 0x6F: 'ο', 0x70: 'π', 0x71: 'θ', 0x72: 'ρ', 0x73: 'σ', 0x74: 'τ', 0x75: 'υ', 0x76: 'ϖ', 0x77: 'ω', 0x78: 'ξ', 0x79: 'ψ', 0x7A: 'ζ',
+    0x41: 'Α', 0x42: 'Β', 0x43: 'Χ', 0x44: 'Δ', 0x45: 'Ε', 0x46: 'Φ', 0x47: 'Γ', 0x48: 'Η', 0x49: 'Ι', 0x4B: 'Κ', 0x4C: 'Λ', 0x4D: 'Μ', 0x4E: 'Ν',
+    0x4F: 'Ο', 0x50: 'Π', 0x51: 'Θ', 0x52: 'Ρ', 0x53: 'Σ', 0x54: 'Τ', 0x55: 'Υ', 0x57: 'Ω', 0x58: 'Ξ', 0x59: 'Ψ', 0x5A: 'Ζ',
+  };
+  const symMap = c => SYM[c] || String.fromCharCode(c);
+  const MTX = { 0x3D: '⌒', 0x22: '⌒', 0x4C: '⋯', 0x4D: '⋯', 0x50: '∥', 0x5E: '^', 0x2A: '∗', 0x71: 'ℏ', 0x6C: 'ℓ', 0x23: '∥', 0x41: '↼', 0x6B: '⌒' };
+  const decoders = {};
+  function decode(bytes, charset) {
+    const name = charset === 136 ? 'big5' : charset === 134 ? 'gbk' : charset === 128 ? 'shift_jis' : 'windows-1252';
+    try { decoders[name] = decoders[name] || new TextDecoder(name); return decoders[name].decode(bytes); }
+    catch (e) { return String.fromCharCode.apply(null, bytes); }
+  }
+  const color = c => '#' + [c & 255, (c >> 8) & 255, (c >> 16) & 255].map(v => v.toString(16).padStart(2, '0')).join('');
+
+  function wmfToSvg(u8) {
+    const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    let off = 0;
+    let vb = null;
+    if (dv.getUint32(0, true) === 0x9AC6CDD7) {
+      const l = dv.getInt16(6, true), t = dv.getInt16(8, true), r = dv.getInt16(10, true), b = dv.getInt16(12, true);
+      vb = [l, t, r - l, b - t];
+      off = 22;
+    }
+    const hsz = dv.getUint16(off + 2, true);
+    off += hsz * 2;
+    const objs = [];
+    const st = { org: [0, 0], ext: null, cp: [0, 0], align: 0, font: null, pen: { w: 1, c: '#000', none: false }, brush: { c: '#000', none: false }, tc: '#000' };
+    const out = [];
+    const sel = i => {
+      const o = objs[i]; if (!o) return;
+      if (o.type === 'font') st.font = o; else if (o.type === 'pen') st.pen = o; else if (o.type === 'brush') st.brush = o;
+    };
+    const add = o => { let i = objs.findIndex(x => !x); if (i < 0) i = objs.length; objs[i] = o; };
+    const pts = (p, n) => { const a = []; for (let i = 0; i < n; i++) a.push(dv.getInt16(p + i * 4, true) + ',' + dv.getInt16(p + i * 4 + 2, true)); return a.join(' '); };
+    const strokeAttr = () => st.pen.none ? 'stroke="none"' : `stroke="${st.pen.c}" stroke-width="${Math.max(st.pen.w, 1)}"`;
+    const fillAttr = () => st.brush.none ? 'fill="none"' : `fill="${st.brush.c}"`;
+    function drawText(x, y, bytes, dx) {
+      const f = st.font || { h: 12, weight: 400, italic: 0, face: 'Times New Roman', charset: 0 };
+      const face = f.face || '';
+      let chars;
+      if (/^Symbol$/i.test(face) || f.charset === 2) chars = [...bytes].map(symMap);
+      else if (/MT Extra/i.test(face)) chars = [...bytes].map(c => MTX[c] || String.fromCharCode(c));
+      else chars = [...decode(bytes, f.charset)];
+      if (!chars.length) return 0;
+      const size = Math.abs(f.h) * (f.h > 0 ? 0.82 : 1) || 12;
+      // 每個字的 x 座標
+      const xs = [];
+      let cx = x, adv = 0;
+      if (dx && dx.length) {
+        let bi = 0;
+        for (let i = 0; i < chars.length; i++) {
+          xs.push(cx);
+          const nb = (f.charset === 136 || f.charset === 134 || f.charset === 128) && /[^\x00-\x7F]/.test(chars[i]) ? 2 : 1;
+          let w = 0; for (let k = 0; k < nb && bi < dx.length; k++) w += dx[bi++];
+          cx += w;
+        }
+        adv = cx - x;
+      } else { chars.forEach((c, i) => xs.push(x + i * size * 0.55)); adv = chars.length * size * 0.55; }
+      const h = st.align & 6;
+      const anchor = h === 6 ? 'middle' : h === 2 ? 'end' : 'start';
+      const v = st.align & 24;
+      const base = v === 24 ? '' : v === 8 ? ' dominant-baseline="text-after-edge"' : ' dominant-baseline="text-before-edge"';
+      const fam = /^Symbol$/i.test(face) || /MT Extra/i.test(face) ? "'Times New Roman',serif" : /[一-鿿]/.test(chars.join('')) ? "'Noto Sans TC','PMingLiU',serif" : `'${face}','Times New Roman',serif`;
+      out.push(`<text x="${xs.map(v2 => v2.toFixed(0)).join(' ')}" y="${y}" font-family="${esc(fam)}" font-size="${size.toFixed(0)}"${f.italic ? ' font-style="italic"' : ''} fill="${st.tc}" text-anchor="${anchor}"${base} xml:space="preserve">${esc(chars.join(''))}</text>`);
+      return adv;
+    }
+    while (off + 6 <= u8.length) {
+      const size = dv.getUint32(off, true), fn = dv.getUint16(off + 4, true), p = off + 6;
+      if (size < 3) break;
+      try {
+        switch (fn) {
+          case 0x0000: off = u8.length; continue;
+          case 0x020B: st.org = [dv.getInt16(p + 2, true), dv.getInt16(p, true)]; break;
+          case 0x020C: st.ext = [dv.getInt16(p + 2, true), dv.getInt16(p, true)]; break;
+          case 0x0214: st.cp = [dv.getInt16(p + 2, true), dv.getInt16(p, true)]; break;
+          case 0x0213: { const x = dv.getInt16(p + 2, true), y = dv.getInt16(p, true); if (!st.pen.none) out.push(`<line x1="${st.cp[0]}" y1="${st.cp[1]}" x2="${x}" y2="${y}" ${strokeAttr()}/>`); st.cp = [x, y]; break; }
+          case 0x0209: st.tc = color(dv.getUint32(p, true)); break;
+          case 0x012E: st.align = dv.getUint16(p, true); break;
+          case 0x02FB: {
+            const face = []; for (let i = p + 18; i < p + 50 && i < off + size * 2 && u8[i]; i++) face.push(u8[i]);
+            add({ type: 'font', h: dv.getInt16(p, true), weight: dv.getInt16(p + 8, true), italic: u8[p + 10], charset: u8[p + 13], face: decode(Uint8Array.from(face), u8[p + 13]) });
+            break;
+          }
+          case 0x02FA: { const style = dv.getUint16(p, true); add({ type: 'pen', none: (style & 15) === 5, w: dv.getInt16(p + 2, true), c: color(dv.getUint32(p + 6, true)) }); break; }
+          case 0x02FC: { const style = dv.getUint16(p, true); add({ type: 'brush', none: style === 1, c: color(dv.getUint32(p + 2, true)) }); break; }
+          case 0x00F7: add({ type: 'palette' }); break;
+          case 0x012D: sel(dv.getUint16(p, true)); break;
+          case 0x01F0: objs[dv.getUint16(p, true)] = null; break;
+          case 0x0A32: {
+            const y = dv.getInt16(p, true), x = dv.getInt16(p + 2, true), cnt = dv.getInt16(p + 4, true), opt = dv.getUint16(p + 6, true);
+            let q = p + 8 + (opt & 6 ? 8 : 0);
+            const bytes = u8.slice(q, q + cnt); q += cnt + (cnt & 1);
+            const dx = []; while (q + 2 <= off + size * 2 && dx.length < cnt) { dx.push(dv.getInt16(q, true)); q += 2; }
+            if (st.align & 1) { const a = drawText(st.cp[0], st.cp[1], bytes, dx); st.cp = [st.cp[0] + a, st.cp[1]]; }
+            else drawText(x, y, bytes, dx);
+            break;
+          }
+          case 0x0521: {
+            const cnt = dv.getInt16(p, true); const bytes = u8.slice(p + 2, p + 2 + cnt); const q = p + 2 + cnt + (cnt & 1);
+            const y = dv.getInt16(q, true), x = dv.getInt16(q + 2, true);
+            if (st.align & 1) { const a = drawText(st.cp[0], st.cp[1], bytes, null); st.cp = [st.cp[0] + a, st.cp[1]]; } else drawText(x, y, bytes, null);
+            break;
+          }
+          case 0x0324: { const n = dv.getInt16(p, true); out.push(`<polygon points="${pts(p + 2, n)}" ${fillAttr()} ${strokeAttr()}/>`); break; }
+          case 0x0325: { const n = dv.getInt16(p, true); out.push(`<polyline points="${pts(p + 2, n)}" fill="none" ${strokeAttr()}/>`); break; }
+          case 0x0538: {
+            const np = dv.getUint16(p, true); let q = p + 2 + np * 2; let d = '';
+            for (let k = 0; k < np; k++) { const n = dv.getUint16(p + 2 + k * 2, true); d += 'M' + pts(q, n).split(' ').join(' L') + ' Z '; q += n * 4; }
+            out.push(`<path d="${d}" ${fillAttr()} ${strokeAttr()} fill-rule="evenodd"/>`); break;
+          }
+          case 0x041B: { const b = dv.getInt16(p, true), r = dv.getInt16(p + 2, true), t = dv.getInt16(p + 4, true), l = dv.getInt16(p + 6, true); out.push(`<rect x="${Math.min(l, r)}" y="${Math.min(t, b)}" width="${Math.abs(r - l)}" height="${Math.abs(b - t)}" ${fillAttr()} ${strokeAttr()}/>`); break; }
+          case 0x0418: { const b = dv.getInt16(p, true), r = dv.getInt16(p + 2, true), t = dv.getInt16(p + 4, true), l = dv.getInt16(p + 6, true); out.push(`<ellipse cx="${(l + r) / 2}" cy="${(t + b) / 2}" rx="${Math.abs(r - l) / 2}" ry="${Math.abs(b - t) / 2}" ${fillAttr()} ${strokeAttr()}/>`); break; }
+          default: break;
+        }
+      } catch (e) { /* 單一紀錄錯誤略過 */ }
+      off += size * 2;
+    }
+    const box = st.ext ? [st.org[0], st.org[1], st.ext[0], st.ext[1]] : vb;
+    if (!box) return null;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box.join(' ')}" preserveAspectRatio="xMidYMid meet" width="100%" height="100%">${out.join('')}</svg>`;
+  }
+
+  // ---- 誤選分析 ----
+  function misconceptions(it) {
+    const N = it.N || 0;
+    if (!N || !it.answer) return [];
+    const out = [];
+    for (const k of ['A', 'B', 'C', 'D']) {
+      if (k === it.answer) continue;
+      const n = it.dist[k] || 0;
+      if (n >= 2 && n > N / 3) out.push({ option: k, n, share: n / N });
+    }
+    return out.sort((a, b) => b.n - a.n);
+  }
+
+  const api = { parseWordDoc, parseRels, wmfToSvg, misconceptions, grid, text, _cellHtml: cellHtml };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.KaoWord = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script type="module">
+import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs';
+// 網頁開啟時就先載入解析程式，之後即使斷網也能分析（也方便使用者做斷網測試）
+try { globalThis.pdfjsWorker = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs'); } catch (e) { console.warn('pdf worker preload failed', e); }
+const K = window.KaoCore;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const f2 = v => v == null ? '—' : (v < 0 ? '−' : '') + Math.abs(v).toFixed(2);
+const sg = v => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toFixed(2);
+const pct = v => v == null ? '—' : v.toFixed(1) + '%';
+
+const KIND_LABEL = { report: '全校學生成績報告', itemrates: '全校各科試題通過率分析', subskills: '全校各科分項能力通過率分析', word: '試題分析（Word）' };
+const LEVEL_KEYS = ['國文', '英語整體', '英語閱讀', '英語聽力', '數學', '社會', '自然'];
+const LEVEL_LABEL = { '國文': '國文', '英語整體': '英語（整體）', '英語閱讀': '英語（閱讀）', '英語聽力': '英語（聽力）', '數學': '數學', '社會': '社會', '自然': '自然' };
+const SUBJ_LABEL = { '國文': '國文', '英語閱讀': '英語（閱讀）', '英語聽力': '英語（聽力）', '數學': '數學', '社會': '社會', '自然': '自然' };
+
+const state = { files: new Map(), skipped: 0, charts: [] };
+
+// ---------- 上傳 ----------
+$('btnFolder').onclick = () => $('inFolder').click();
+$('privLink').onclick = e => { e.preventDefault(); $('guideDetails').open = true; $('privacy').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+$('btnFiles').onclick = () => $('inFiles').click();
+$('inFolder').onchange = e => { handleFiles([...e.target.files]); e.target.value = ''; };
+$('inFiles').onchange = e => { handleFiles([...e.target.files]); e.target.value = ''; };
+$('btnClear').onclick = () => { [...state.files.keys()].forEach(dropRec); state.files.clear(); state.skipped = 0; render(); $('status').textContent = '已清除。'; };
+$('btnPrint').onclick = e => { e.preventDefault(); openPrintPanel(); };
+let inFrame = true;
+try { inFrame = window.self !== window.top; } catch (_) {}
+if (inFrame) { $('btnPrint').classList.add('hidden'); $('printNote').textContent = '（在 Claude 的分享頁面裡無法列印；請改用網站正式網址，或把網頁檔下載到電腦後開啟。）'; }
+const drop = $('drop');
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', async e => {
+  const items = [...(e.dataTransfer.items || [])];
+  const entries = items.map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if (entries.length) {
+    const files = [];
+    for (const en of entries) await walk(en, files);
+    handleFiles(files);
+  } else handleFiles([...e.dataTransfer.files]);
+});
+function walk(entry, out) {
+  return new Promise(res => {
+    if (entry.isFile) entry.file(f => { out.push(f); res(); }, () => res());
+    else if (entry.isDirectory) {
+      const r = entry.createReader(); const all = [];
+      const next = () => r.readEntries(async ents => {
+        if (!ents.length) { for (const en of all) await walk(en, out); res(); }
+        else { all.push(...ents); next(); }
+      }, () => res());
+      next();
+    } else res();
+  });
+}
+
+async function pdfPages(buf) {
+  const doc = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const tc = await (await doc.getPage(i)).getTextContent();
+    pages.push(tc.items.filter(t => t.str !== undefined).map(t => ({ x: t.transform[4], y: t.transform[5], w: t.width, str: t.str })));
+  }
+  await doc.destroy();
+  return pages;
+}
+const xmlText = xml => xml.slice(0, 400000).replace(/<\/w:p>/g, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', bmp: 'image/bmp' };
+async function parseDocx(zip, xml, rec) {
+  const relF = zip.file('word/_rels/document.xml.rels');
+  const rels = KaoWord.parseRels(relF ? await relF.async('string') : '');
+  const bytes = {};
+  for (const t of new Set(Object.values(rels))) {
+    const f = /^media\//.test(t) && zip.file('word/' + t);
+    if (f) bytes[t] = await f.async('uint8array');
+  }
+  rec.urls = [];
+  const cache = {};
+  const media = t => {
+    if (cache[t] !== undefined) return cache[t];
+    const b = bytes[t]; if (!b) return (cache[t] = null);
+    const ext = (t.split('.').pop() || '').toLowerCase();
+    if (ext === 'wmf') { let svg = null; try { svg = KaoWord.wmfToSvg(b); } catch (e) {} return (cache[t] = svg ? { url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) } : null); }
+    if (MIME[ext]) { const u = URL.createObjectURL(new Blob([b], { type: MIME[ext] })); rec.urls.push(u); return (cache[t] = { url: u }); }
+    return (cache[t] = null);
+  };
+  const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  return KaoWord.parseWordDoc(doc, rels, media);
+}
+function dropRec(key) { const old = state.files.get(key); if (old && old.urls) old.urls.forEach(u => { try { URL.revokeObjectURL(u); } catch (e) {} }); }
+
+async function handleFiles(list) {
+  const todo = list.filter(f => /\.(pdf|docx)$/i.test(f.name) && !f.name.startsWith('~$'));
+  state.skipped += list.length - todo.length;
+  if (!todo.length) { $('status').textContent = '沒有找到 PDF 或 Word（.docx）檔案。'; render(); return; }
+  let n = 0;
+  for (const file of todo) {
+    n++;
+    $('status').textContent = `正在分析第 ${n} / ${todo.length} 個檔案：${file.name}`;
+    const rec = { name: file.name, path: file.webkitRelativePath || file.name, kind: 'unknown', status: 'err', note: '' };
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      if (/\.pdf$/i.test(file.name)) {
+        const pages = await pdfPages(buf);
+        const id = K.identifyPdf(pages);
+        Object.assign(rec, id);
+        if (id.kind === 'report') rec.data = K.parseReport(pages);
+        else if (id.kind === 'itemrates') rec.data = K.parseItemRates(pages);
+        else if (id.kind === 'subskills') rec.data = K.parseSubskills(pages);
+        if (rec.data) { rec.status = 'ok'; rec.note = summarize(rec); }
+        else rec.note = '無法辨識：不是會考學校報告的 PDF';
+      } else {
+        const zip = await JSZip.loadAsync(buf);
+        const xf = zip.file('word/document.xml');
+        const xml = xf ? await xf.async('string') : '';
+        const id = K.identifyDocxText(xmlText(xml));
+        Object.assign(rec, id);
+        if (id.kind === 'word') {
+          rec.data = { info: {}, ...id };
+          if (id.version === 'national') { rec.status = 'warn'; rec.note = '這是「全國版」，沒有本校的作答資料，請改傳學校版'; }
+          else {
+            rec.parsed = await parseDocx(zip, xml, rec);
+            const nIt = rec.parsed.items.length, nOpen = rec.parsed.openEnded.length;
+            rec.status = nIt ? 'ok' : 'err';
+            rec.note = nIt ? `${SUBJ_LABEL[id.subject]}・${nIt} 題${nOpen ? `＋非選擇題 ${nOpen} 題` : ''}・有效 ${id.validN ?? '?'} 人` : '找不到逐題表格，無法解析';
+          }
+        } else rec.note = '無法辨識：不是會考試題分析的 Word 檔';
+      }
+    } catch (err) {
+      console.error(err);
+      rec.note = '讀取失敗：檔案可能已損壞，或不是有效的 PDF／Word 檔';
+    }
+    const key = rec.kind === 'unknown' ? 'u:' + rec.path : `${rec.kind}:${rec.year}:${rec.subject || ''}:${rec.version || ''}`;
+    dropRec(key);
+    state.files.set(key, rec);
+  }
+  const bad = [...state.files.values()].filter(r => r.status === 'err').length;
+  $('status').textContent = `完成：共收到 ${state.files.size} 個檔案` + (bad ? `，其中 ${bad} 個無法辨識` : '') + (state.skipped ? `；另略過 ${state.skipped} 個非 PDF／Word 檔` : '') + '。';
+  render();
+  if (!state.guideClosed && [...state.files.values()].some(r => r.status === 'ok')) { $('guideDetails').open = false; state.guideClosed = true; }
+}
+function summarize(r) {
+  if (r.kind === 'report') return `考生 ${r.data.info.examinees ?? '?'} 人・${Object.keys(r.data.levels).length} 科等級・寫作 ${r.data.writing ? '✓' : '未抓到'}`;
+  if (r.kind === 'itemrates') return Object.entries(r.data.subjects).map(([k, v]) => `${SUBJ_LABEL[k]} ${v.items.length} 題`).join('、');
+  if (r.kind === 'subskills') { const ys = Object.values(r.data.subjects)[0]?.years || []; return `${Object.values(r.data.subjects).reduce((a, s) => a + s.rows.length, 0)} 個分項・含 ${[...ys].sort().join('、')} 年`; }
+  return '';
+}
+
+// ---------- 繪圖工具 ----------
+Chart.defaults.font.family = "'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
+Chart.defaults.font.size = 15;
+Chart.defaults.color = '#4a5566';
+Chart.defaults.plugins.legend.display = false;
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.titleFont = { size: 15, weight: '700' };
+Chart.defaults.plugins.tooltip.bodyFont = { size: 15 };
+Chart.defaults.animation = false;
+// 堆疊長條內的數字標籤
+const segLabels = {
+  id: 'segLabels',
+  afterDatasetsDraw(chart, _a, opts) {
+    if (!opts || !opts.on) return;
+    const { ctx } = chart;
+    ctx.save(); ctx.font = `500 ${opts.size || 14}px 'Noto Sans TC', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    chart.data.datasets.forEach((ds, di) => {
+      const meta = chart.getDatasetMeta(di);
+      meta.data.forEach((bar, i) => {
+        const v = ds.data[i]; if (v == null || v === 0) return;
+        const w = Math.abs(bar.x - bar.base);
+        const txt = opts.fmt ? opts.fmt(v) : String(v);
+        if (w < ctx.measureText(txt).width + 8) return;
+        ctx.fillStyle = (ds.labelColors && ds.labelColors[i]) || ds.labelColor || '#fff';
+        ctx.fillText(txt, (bar.x + bar.base) / 2, bar.y);
+      });
+    });
+    ctx.restore();
+  },
+};
+Chart.register(segLabels);
+function mkChart(canvas, cfg) { const c = new Chart(canvas, cfg); state.charts.push(c); return c; }
+function panel(parent, title, right, h) {
+  const p = document.createElement('div'); p.className = 'panel';
+  p.innerHTML = `<h4><span>${title}</span><span>${right || ''}</span></h4><div class="chartbox" style="height:${h}px"><canvas></canvas></div>`;
+  parent.appendChild(p);
+  return p;
+}
+
+// ---------- 主畫面 ----------
+function render() {
+  state.charts.forEach(c => c.destroy()); state.charts = [];
+  const recs = [...state.files.values()];
+  $('btnClear').classList.toggle('hidden', !recs.length);
+  $('fileTableWrap').classList.toggle('hidden', !recs.length);
+  renderFileTables(recs);
+  const usable = recs.filter(r => r.data && r.status !== 'err');
+  const A = K.aggregate(usable);
+  const warn = [...A.warnings];
+  recs.filter(r => r.status === 'warn').forEach(r => warn.push(`「${r.name}」${r.note}。`));
+  $('warnings').innerHTML = warn.length ? `<div class="warnbox">${warn.map(w => `<p>⚠️ ${esc(w)}</p>`).join('')}</div>` : '';
+  const hasPdf = usable.some(r => ['report', 'itemrates', 'subskills'].includes(r.kind) || (r.kind === 'word' && r.parsed));
+  $('results').classList.toggle('hidden', !hasPdf);
+  $('schoolName').textContent = A.school.name ? `${A.school.name}${A.school.code ? '（學校代碼 ' + A.school.code + '）' : ''}` : '';
+  if (!hasPdf) return;
+  renderBasic(A); renderLevels(A); renderWriting(A); renderMean(A); renderSub(A); renderHeat(A); renderItems(); renderRules(A); renderCheck(A, recs);
+  if (state.subTab) showSubTab(state.subTab);
+}
+
+function renderFileTables(recs) {
+  const years = [...new Set(recs.filter(r => r.year).map(r => r.year))].sort();
+  const has = (y, k, s) => recs.find(r => r.year === y && r.kind === k && (!s || r.subject === s) && r.status !== 'err');
+  const mark = r => !r ? '<span class="tag err">缺</span>' : r.status === 'warn' ? '<span class="tag warn">全國版</span>' : r.status === 'wait' ? '<span class="tag wait">已收到</span>' : '<span class="tag ok">✓</span>';
+  const wordSubs = ['國文', '英語閱讀', '英語聽力', '數學', '社會', '自然'];
+  const wordCell = y => {
+    const school = wordSubs.filter(s => recs.some(r => r.year === y && r.kind === 'word' && r.subject === s && r.status === 'ok'));
+    const nat = recs.filter(r => r.year === y && r.kind === 'word' && r.status === 'warn').length;
+    const missing = wordSubs.filter(s => !school.includes(s)).map(s => SUBJ_LABEL[s]);
+    return `<span class="tag ${school.length === 6 ? 'ok' : school.length ? 'warn' : 'err'}">學校版 ${school.length} / 6 科</span>` +
+      (nat ? ` <span class="tag warn">另有全國版 ${nat} 份</span>` : '') +
+      (missing.length && missing.length < 6 ? `<div class="note">缺：${missing.join('、')}</div>` : '');
+  };
+  let h = '<thead><tr><th>年份</th><th>全校學生成績報告</th><th>試題通過率分析</th><th>分項能力通過率分析</th><th>Word 試題分析</th></tr></thead><tbody>';
+  for (const y of years) {
+    h += `<tr><td>${y} 年</td><td>${mark(has(y, 'report'))}</td><td>${mark(has(y, 'itemrates'))}</td><td>${mark(has(y, 'subskills'))}</td><td class="wrap">${wordCell(y)}</td></tr>`;
+  }
+  $('checkTable').innerHTML = h + '</tbody>';
+  const cls = { ok: 'ok', wait: 'wait', warn: 'warn', err: 'err' };
+  const txt = { ok: '已分析', wait: '已收到', warn: '請改傳', err: '無法使用' };
+  $('fileTable').innerHTML = '<thead><tr><th>檔案</th><th>辨識結果</th><th>狀態</th><th>內容</th></tr></thead><tbody>' +
+    recs.sort((a, b) => (a.year || 0) - (b.year || 0) || String(a.kind).localeCompare(b.kind)).map(r =>
+      `<tr><td class="wrap">${esc(r.path)}</td><td>${r.year ? r.year + ' 年 ' : ''}${esc(KIND_LABEL[r.kind] || '—')}</td><td><span class="tag ${cls[r.status]}">${txt[r.status]}</span></td><td class="wrap">${esc(r.note)}</td></tr>`).join('') + '</tbody>';
+}
+
+function renderBasic(A) {
+  const ys = Object.keys(A.reports).map(Number).sort();
+  $('basicLead').textContent = `${A.school.name || ''}${A.school.county ? '・' + A.school.county : ''}・已上傳 ${A.years.join('、')} 年的資料。`;
+  $('basicStats').innerHTML = ys.length ? ys.map((y, i) => {
+    const n = A.reports[y].info.examinees; const prev = i ? A.reports[ys[i - 1]].info.examinees : null;
+    return `<div class="stat"><div class="k">${y} 年考生人數</div><div class="v">${n ?? '—'}<small> 人</small></div><div class="s">${prev != null && n != null ? `比前一年 ${n - prev >= 0 ? '+' : '−'}${Math.abs(n - prev)} 人` : '&nbsp;'}</div></div>`;
+  }).join('') : '<div class="empty">尚未上傳「全校學生成績報告」。</div>';
+  if (!ys.length) { $('validTable').innerHTML = ''; return; }
+  let h = '<thead><tr><th>年份</th><th class="num">考生</th>' + LEVEL_KEYS.filter(k => k !== '英語整體').map(k => `<th class="num">${LEVEL_LABEL[k]}</th>`).join('') + '</tr></thead><tbody>';
+  for (const y of ys) {
+    h += `<tr><td>${y} 年</td><td class="num">${A.reports[y].info.examinees ?? '—'}</td>` + LEVEL_KEYS.filter(k => k !== '英語整體').map(k => {
+      const v = A.validN[y]?.[k]; const src = A.validSource[y]?.[k];
+      return `<td class="num">${v == null ? '—' : (src === '推算' ? '≈' : '') + v}</td>`;
+    }).join('') + '</tr>';
+  }
+  $('validTable').innerHTML = h + '</tbody>';
+}
+
+function renderLevels(A) {
+  const box = $('levelCharts'); box.innerHTML = '';
+  const ys = Object.keys(A.reports).map(Number).sort();
+  if (!ys.length) { box.innerHTML = '<div class="empty">尚未上傳「全校學生成績報告」。</div>'; $('levelTable').innerHTML = ''; return; }
+  const colors = [css('--lv-low'), css('--lv-mid'), css('--lv-high')];
+  const names = ['待加強', '基礎', '精熟'];
+  for (const k of LEVEL_KEYS) {
+    const rows = ys.map(y => A.reports[y].levels[k] || [null, null, null]);
+    const dl = ys.map((y, i) => i && rows[i][0] != null && rows[i - 1][0] != null ? rows[i][0] - rows[i - 1][0] : null);
+    const last = dl[dl.length - 1];
+    const right = last == null ? '' : `<span class="delta ${last > 0.005 ? 'up' : last < -0.005 ? 'down' : 'flat'}">待加強 ${last > 0.005 ? '▲' : last < -0.005 ? '▼' : '─'} ${Math.abs(last).toFixed(1)} 個百分點</span>`;
+    const p = panel(box, LEVEL_LABEL[k] + (k === '英語聽力' ? '<span class="note">（聽力只分兩級）</span>' : ''), right, 34 + ys.length * 44);
+    mkChart(p.querySelector('canvas'), {
+      type: 'bar',
+      data: { labels: ys.map(y => y + ' 年'), datasets: names.map((nm, j) => ({ label: nm, data: rows.map(r => r[j]), backgroundColor: colors[j], borderColor: '#fff', borderWidth: { left: 0, right: 2, top: 0, bottom: 0 }, borderSkipped: false, barPercentage: .78, categoryPercentage: .9, labelColor: j === 1 ? '#2b2100' : '#fff' })) },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        scales: { x: { stacked: true, min: 0, max: 100, ticks: { callback: v => v + '%', stepSize: 25 }, grid: { color: '#eef1f5' } }, y: { stacked: true, grid: { display: false } } },
+        plugins: { segLabels: { on: true, fmt: v => Math.round(v) + '%' },
+          tooltip: { callbacks: { label: c => `${c.dataset.label}：${c.raw == null ? '—' : c.raw.toFixed(2) + '%'}` + (c.datasetIndex === 0 && dl[c.dataIndex] != null ? `（比前一年 ${dl[c.dataIndex] >= 0 ? '+' : '−'}${Math.abs(dl[c.dataIndex]).toFixed(2)}）` : '') } } },
+      },
+    });
+  }
+  let h = '<thead><tr><th>科目</th><th>年份</th><th class="num">待加強</th><th class="num">基礎</th><th class="num">精熟</th><th class="num">待加強增減</th></tr></thead><tbody>';
+  for (const k of LEVEL_KEYS) ys.forEach((y, i) => {
+    const r = A.reports[y].levels[k] || []; const pv = i ? A.reports[ys[i - 1]].levels[k] : null;
+    const d = pv && r[0] != null ? r[0] - pv[0] : null;
+    h += `<tr><td>${i ? '' : LEVEL_LABEL[k]}</td><td>${y} 年</td><td class="num">${pct(r[0])}</td><td class="num">${pct(r[1])}</td><td class="num">${pct(r[2])}</td><td class="num"><span class="delta ${d == null ? 'flat' : d > 0.005 ? 'up' : d < -0.005 ? 'down' : 'flat'}">${d == null ? '—' : (d > 0.005 ? '▲ ' : d < -0.005 ? '▼ ' : '') + Math.abs(d).toFixed(2)}</span></td></tr>`;
+  });
+  $('levelTable').innerHTML = h + '</tbody>';
+}
+
+function renderWriting(A) {
+  const ys = Object.keys(A.reports).map(Number).filter(y => A.reports[y].writing).sort();
+  const sec = $('sec-writing');
+  if (!ys.length) { $('writingStats').innerHTML = '<div class="empty">尚未上傳「全校學生成績報告」。</div>'; $('writingBox').classList.add('hidden'); return; }
+  $('writingBox').classList.remove('hidden');
+  const ramp = ['#e6edf7', '#c7d6ec', '#a3bce0', '#7d9fd0', '#5682c0', '#3565a8', '#1d4886'];
+  const lab = ['零級分', '一級分', '二級分', '三級分', '四級分', '五級分', '六級分'];
+  $('writingLegend').innerHTML = lab.map((l, i) => `<span><i style="background:${ramp[i]}"></i>${l}</span>`).join('');
+  $('writingStats').innerHTML = ys.map((y, i) => {
+    const w = A.reports[y].writing; const v = w[4] + w[5] + w[6];
+    const pw = i ? A.reports[ys[i - 1]].writing : null; const pv = pw ? pw[4] + pw[5] + pw[6] : null;
+    return `<div class="stat"><div class="k">${y} 年 四級分以上</div><div class="v">${v.toFixed(1)}<small> %</small></div><div class="s">${pv != null ? `比前一年 ${v - pv >= 0 ? '+' : '−'}${Math.abs(v - pv).toFixed(1)} 個百分點` : '&nbsp;'}</div></div>`;
+  }).join('');
+  $('writingBox').style.height = (40 + ys.length * 46) + 'px';
+  mkChart($('writingChart'), {
+    type: 'bar',
+    data: { labels: ys.map(y => y + ' 年'), datasets: lab.map((l, j) => ({ label: l, data: ys.map(y => A.reports[y].writing[j]), backgroundColor: ramp[j], borderColor: '#fff', borderWidth: { left: 0, right: 2, top: 0, bottom: 0 }, borderSkipped: false, barPercentage: .78, categoryPercentage: .9, labelColor: j < 3 ? '#1c2430' : '#fff' })) },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: { x: { stacked: true, min: 0, max: 100, ticks: { callback: v => v + '%', stepSize: 25 }, grid: { color: '#eef1f5' } }, y: { stacked: true, grid: { display: false } } },
+      plugins: { segLabels: { on: true, fmt: v => Math.round(v) + '%' }, tooltip: { callbacks: { label: c => `${c.dataset.label}：${c.raw.toFixed(2)}%` } } } },
+  });
+  let h = '<thead><tr><th>年份</th>' + lab.map(l => `<th class="num">${l}</th>`).join('') + '<th class="num">四級分以上</th></tr></thead><tbody>';
+  for (const y of ys) { const w = A.reports[y].writing; h += `<tr><td>${y} 年</td>${w.map(v => `<td class="num">${pct(v)}</td>`).join('')}<td class="num"><b>${pct(w[4] + w[5] + w[6])}</b></td></tr>`; }
+  $('writingTable').innerHTML = h + '</tbody>';
+}
+
+const dumbbell = {
+  id: 'dumbbell',
+  beforeDatasetsDraw(chart, _a, o) {
+    if (!o || !o.on) return;
+    const { ctx } = chart; const n = chart.data.datasets[0].data.length;
+    ctx.save(); ctx.strokeStyle = '#c3cbd6'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    for (let i = 0; i < n; i++) {
+      const pts = chart.data.datasets.map((d, di) => chart.getDatasetMeta(di).data[i]).filter(Boolean);
+      const xs = pts.map(p => p.x); if (!xs.length) continue;
+      ctx.beginPath(); ctx.moveTo(Math.min(...xs), pts[0].y); ctx.lineTo(Math.max(...xs), pts[0].y); ctx.stroke();
+    }
+    ctx.restore();
+  },
+  afterDatasetsDraw(chart, _a, o) {
+    if (!o || !o.on) return;
+    const { ctx, chartArea } = chart;
+    ctx.save(); ctx.font = "700 14px 'Noto Sans TC', sans-serif"; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    o.gaps.forEach((g, i) => {
+      const p = chart.getDatasetMeta(0).data[i]; if (!p || g == null) return;
+      const lv = K.gapLevel(g); ctx.fillStyle = lv === 2 ? '#b83f28' : lv === 1 ? '#c4583f' : '#6b7686';
+      ctx.fillText(f2(g), chart.width - 4, p.y);
+    });
+    ctx.restore();
+  },
+};
+Chart.register(dumbbell);
+
+function renderMean(A) {
+  const ys = Object.keys(A.meanRates).map(Number).sort();
+  const box = $('meanCharts'); box.innerHTML = '';
+  if (!ys.length) { box.innerHTML = '<div class="empty">尚未上傳「全校各科試題通過率分析」。</div>'; $('meanTable').innerHTML = ''; return; }
+  const ids = K.SUBJECTS.filter(id => ys.some(y => A.meanRates[y][id]));
+  const all = ys.flatMap(y => ids.flatMap(id => A.meanRates[y][id] ? [A.meanRates[y][id].sch, A.meanRates[y][id].cty, A.meanRates[y][id].nat] : []));
+  const lo = Math.max(0, Math.floor(Math.min(...all) * 10 - 0.5) / 10), hi = Math.min(1, Math.ceil(Math.max(...all) * 10 + 0.5) / 10);
+  const C = { sch: css('--s-school'), cty: css('--s-cty'), nat: css('--s-nat') };
+  box.style.setProperty('--mcols', Math.min(ys.length, 3));
+  for (const y of ys) {
+    const p = panel(box, `${y} 年`, '', 34 * ids.length + 46);
+    const get = k => ids.map((id, i) => A.meanRates[y][id] ? { x: A.meanRates[y][id][k], y: i } : null).filter(Boolean);
+    const gaps = ids.map(id => A.meanRates[y][id] ? A.meanRates[y][id].gapNat : null);
+    mkChart(p.querySelector('canvas'), {
+      type: 'scatter',
+      data: { datasets: [['全國', 'nat'], ['縣市', 'cty'], ['本校', 'sch']].map(([l, k]) => ({ label: l, data: get(k), backgroundColor: C[k], borderColor: '#fff', borderWidth: 1.5, pointRadius: k === 'sch' ? 7 : 6, pointHoverRadius: 8 })) },
+      options: { responsive: true, maintainAspectRatio: false, layout: { padding: { right: 52 } }, interaction: { mode: 'index', intersect: false, axis: 'y' },
+        scales: {
+          x: { min: lo, max: hi, ticks: { stepSize: 0.1, callback: v => v.toFixed(1), font: { size: 13 } }, grid: { color: '#eef1f5' } },
+          y: { type: 'linear', min: -0.6, max: ids.length - 0.4, reverse: true, afterBuildTicks: ax => { ax.ticks = ids.map((_, i) => ({ value: i })); }, ticks: { callback: v => SUBJ_LABEL[ids[v]] || '', font: { size: 14 } }, grid: { display: false } },
+        },
+        plugins: { dumbbell: { on: true, gaps }, tooltip: { callbacks: { title: c => `${y} 年 ${SUBJ_LABEL[ids[c[0].raw.y]]}`, label: c => `${c.dataset.label}：${c.raw.x.toFixed(3)}`, footer: c => `本校減全國：${f2(gaps[c[0].raw.y])}` } } } },
+    });
+  }
+  let h = '<thead><tr><th>科目</th>' + ys.map(y => `<th>${y} 年</th>`).join('') + '</tr></thead><tbody>';
+  for (const id of K.SUBJECTS) {
+    if (!ys.some(y => A.meanRates[y][id])) continue;
+    h += `<tr><td><b>${SUBJ_LABEL[id]}</b></td>` + ys.map(y => {
+      const m = A.meanRates[y][id];
+      if (!m) return '<td class="note">—</td>';
+      return `<td><span class="gapchip big l${K.gapLevel(m.gapNat)}" title="本校減全國">${f2(m.gapNat)}</span><div class="mt">本校 <b>${m.sch.toFixed(2)}</b>・縣市 ${m.cty.toFixed(2)}・全國 ${m.nat.toFixed(2)}</div><div class="mt note">${m.n} 題・本校減縣市 ${f2(m.gapCty)}</div></td>`;
+    }).join('') + '</tr>';
+  }
+  $('meanTable').innerHTML = h + '</tbody>';
+}
+
+function patTag(p) { return p ? `<span class="pat pat-${p}">${K.PATTERN_LABEL[p]}</span>` : '<span class="pat pat-swing">年份不足</span>'; }
+
+function renderSub(A) {
+  const wrap = $('subWrap'); wrap.innerHTML = '';
+  const ids = K.SUBJECTS.filter(id => A.subskills[id]);
+  const srcs = [...state.files.values()].filter(r => r.kind === 'subskills' && r.status === 'ok').sort((a, b) => a.year - b.year);
+  $('subSource').classList.toggle('hidden', !srcs.length);
+  $('subSource').innerHTML = '📄 資料來源：' + srcs.map(r => {
+    const ys = [...new Set(Object.values(r.data.subjects).flatMap(s => s.years))].sort();
+    return `${r.year} 年「全校各科分項能力通過率分析」（報告內本來就含 ${ys[0]}–${ys[ys.length - 1]} 年）`;
+  }).join('、') + '。心測中心的這份報告每年都附上近三年的數據，所以只上傳一個年份也能看到三年變化。';
+  if (!ids.length) { wrap.innerHTML = '<div class="empty">尚未上傳「全校各科分項能力通過率分析」。</div>'; return; }
+  const C = { sch: css('--s-school'), nat: css('--s-nat') };
+  const tabs = document.createElement('div'); tabs.className = 'subtabs'; tabs.setAttribute('role', 'tablist'); wrap.appendChild(tabs);
+  if (!ids.includes(state.subTab)) state.subTab = ids[0];
+  for (const id of ids) {
+    const nLong = A.subskills[id].filter(s => s.pattern === 'long').length;
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'tab'); b.dataset.id = id;
+    b.innerHTML = `${SUBJ_LABEL[id]}<span class="c">${A.subskills[id].length} 項</span>` + (nLong ? `<span class="lc">長期需求 ${nLong}</span>` : '');
+    b.onclick = () => showSubTab(id);
+    tabs.appendChild(b);
+    const pane = document.createElement('div'); pane.className = 'subpane'; pane.dataset.id = id; pane.setAttribute('role', 'tabpanel'); wrap.appendChild(pane);
+    const h = document.createElement('h3'); h.textContent = SUBJ_LABEL[id]; h.className = 'printonly'; pane.appendChild(h);
+    const grid = document.createElement('div'); grid.className = 'grid3'; pane.appendChild(grid);
+    for (const s of A.subskills[id]) {
+      const p = panel(grid, `<span title="${esc(s.name)}">${esc(s.short)}</span>`, patTag(s.pattern), 170);
+      p.dataset.key = id + '|' + s.name;
+      const gl = s.patternYears.map(y => `${y}：${f2(s.series[y].gap)}`).join('　');
+      p.insertAdjacentHTML('beforeend', `<div class="gapline">本校−全國　${gl}</div><p class="pdesc">${s.pattern ? K.PATTERN_DESC[s.pattern] : ''}</p>`);
+      if (s.short !== s.name) p.insertAdjacentHTML('beforeend', `<p class="note" style="margin:.2rem 0 0">全名：${esc(s.name)}</p>`);
+      const gb = document.createElement('button'); gb.type = 'button'; gb.className = 'ghost subbtn'; gb.textContent = '看這個分項的題目 ›';
+      gb.onclick = () => gotoItems(id, s.name); p.appendChild(gb);
+      mkChart(p.querySelector('canvas'), {
+        type: 'line',
+        data: { labels: s.years.map(y => y + ''), datasets: [
+          { label: '本校', data: s.years.map(y => s.series[y].sch), borderColor: C.sch, backgroundColor: C.sch, borderWidth: 2.5, pointRadius: 4.5, pointBorderColor: '#fff', pointBorderWidth: 2 },
+          { label: '全國', data: s.years.map(y => s.series[y].nat), borderColor: C.nat, backgroundColor: C.nat, borderWidth: 2, pointRadius: 4, pointBorderColor: '#fff', pointBorderWidth: 2 },
+        ] },
+        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+          scales: { y: { min: 0, max: 1, ticks: { stepSize: .25, callback: v => v.toFixed(2), font: { size: 13 } }, grid: { color: '#eef1f5' } }, x: { grid: { display: false }, offset: true, ticks: { font: { size: 13 } } } },
+          plugins: { tooltip: { callbacks: { title: c => c[0].label + ' 年', label: c => `${c.dataset.label}：${c.raw.toFixed(2)}`, afterBody: c => `差距：${f2(s.series[s.years[c[0].dataIndex]].gap)}` } } } },
+      });
+    }
+  }
+}
+
+function showSubTab(id, focusName) {
+  state.subTab = id;
+  document.querySelectorAll('.subtabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.id === id ? 'true' : 'false'));
+  document.querySelectorAll('.subpane').forEach(p => p.classList.toggle('on', p.dataset.id === id));
+  if (focusName) {
+    const card = [...document.querySelectorAll('.subpane.on .panel')].find(p => p.dataset.key === id + '|' + focusName);
+    if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); card.classList.add('flash'); setTimeout(() => card.classList.remove('flash'), 1600); }
+  }
+}
+
+function renderHeat(A) {
+  const el = $('heat'); el.innerHTML = '';
+  const ids = K.SUBJECTS.filter(id => A.subskills[id]);
+  if (!ids.length) { el.innerHTML = '<div class="empty" style="grid-column:1/-1">尚未上傳「全校各科分項能力通過率分析」。</div>'; $('heatLead').textContent = ''; $('patternLegend').innerHTML = ''; return; }
+  const latest = Math.max(...ids.flatMap(id => A.subskills[id].map(s => s.years[s.years.length - 1])));
+  $('heatLead').textContent = `總覽：每格是一個分項能力，顏色代表 ${latest} 年「本校減全國」的差距大小，小字是最近三年的差距型態。點任一格可看該分項的多年小圖。`;
+  for (const id of ids) {
+    el.insertAdjacentHTML('beforeend', `<div class="subj">${SUBJ_LABEL[id]}</div><div class="cells">` + A.subskills[id].map(s => {
+      const y = s.years[s.years.length - 1]; const g = s.series[y].gap; const lv = K.gapLevel(g);
+      return `<div class="cell l${lv}" role="button" tabindex="0" data-id="${id}" data-name="${esc(s.name)}" title="${esc(s.name)}｜${y} 年差距 ${f2(g)}｜點一下看小圖"><div class="n">${esc(s.short)}</div><div class="gt"><span class="g">${f2(g)}</span><span class="t">${s.pattern ? K.PATTERN_LABEL[s.pattern] : '年份不足'}</span></div></div>`;
+    }).join('') + '</div>');
+  }
+  el.querySelectorAll('.cell').forEach(c => {
+    const go = () => { showSubTab(c.dataset.id, c.dataset.name); };
+    c.onclick = go; c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+  });
+  const cnt = {}; ids.forEach(id => A.subskills[id].forEach(s => { cnt[s.pattern] = (cnt[s.pattern] || 0) + 1; }));
+  const rules = {
+    widen: '每年差距都比前一年大（或相同），且三年共擴大 0.07 以上',
+    narrow: '每年差距都比前一年小（或相同），且三年共縮小 0.07 以上',
+    long: '三年起伏在 0.07 以內，且三年平均差距在 −0.25 以下',
+    steady: '三年起伏在 0.07 以內',
+    swing: '以上都不符合',
+  };
+  $('patternLegend').innerHTML = '<thead><tr><th>型態</th><th class="num">分項數</th><th>判斷條件（依序判斷，符合就停止）</th><th>怎麼解讀</th></tr></thead><tbody>' +
+    ['widen', 'narrow', 'long', 'steady', 'swing'].map(p => `<tr><td>${patTag(p)}</td><td class="num">${cnt[p] || 0}</td><td class="wrap">${rules[p]}</td><td class="wrap">${K.PATTERN_DESC[p]}</td></tr>`).join('') + '</tbody>';
+}
+
+function renderRules(A) {
+  const ys = Object.keys(A.validN).map(Number).sort();
+  const y = ys[ys.length - 1];
+  let impact = '';
+  if (y) {
+    const parts = K.SUBJECTS.map(id => { const n = A.validN[y][id]; return n ? `${SUBJ_LABEL[id]} ${n} 人（約 ${(1 / n).toFixed(2)}）` : null; }).filter(Boolean);
+    impact = `<li>以本校 ${y} 年為例，一位學生對通過率的影響約為「1 ÷ 有效人數」：${parts.join('、')}。差距的小幅變動，可能只是一兩位學生的差別。</li>`;
+  }
+  $('principles').innerHTML = `
+    <li>每屆考生人數少時，一位學生就能讓通過率明顯變動；加上每年考題難易不同，所以<b>不看單年通過率的升降</b>，而看「本校減全國」差距的多年型態。</li>
+    ${impact}
+    <li>會考數據用來找出學生的<b>長期學習特性</b>，作為規劃教學與補救的參考，<b>不用來評斷個別教師</b>。</li>
+    <li>「長期需求」代表不同屆的學生都卡在同一個分項，最值得長期經營；「起伏大」主要受各屆學生組成與考題影響，不宜過度解讀。</li>`;
+}
+
+// ---------- 第二階段：逐題分析 ----------
+const OPT_C = { ok: '#2f9a5a', bad: '#d0563c', other: '#b9c3cf', none: '#e3e7ec' };
+const pct0 = v => v == null ? '—' : Math.round(v * 100) + '%';
+const p2 = v => v == null ? '—' : v.toFixed(2);
+
+// 把 Word 與 PDF 合併成每年每科的逐題資料
+function buildItems() {
+  const recs = [...state.files.values()];
+  const out = {};
+  const pdfs = recs.filter(r => r.kind === 'itemrates' && r.status === 'ok');
+  const words = recs.filter(r => r.kind === 'word' && r.status === 'ok' && r.parsed);
+  const years = new Set([...pdfs.map(r => r.year), ...words.map(r => r.year)]);
+  for (const y of years) {
+    out[y] = {};
+    const pdf = pdfs.find(r => r.year === y);
+    for (const id of K.SUBJECTS) {
+      const w = words.find(r => r.year === y && r.subject === id);
+      const pItems = pdf && pdf.data.subjects[id] ? pdf.data.subjects[id].items : null;
+      if (!w && !pItems) continue;
+      const nos = new Set([...(pItems || []).map(i => i.no), ...(w ? w.parsed.items.map(i => i.no) : [])]);
+      const items = [...nos].sort((a, b) => a - b).map(no => {
+        const pi = pItems ? pItems.find(i => i.no === no) : null;
+        const wi = w ? w.parsed.items.find(i => i.no === no) : null;
+        const it = {
+          no, year: y, subject: id,
+          skill: pi ? pi.skill : '', objective: (wi && wi.objective) || (pi ? pi.objective : ''),
+          nat: pi ? pi.nat : null, cty: pi ? pi.cty : null,
+          sch: wi && wi.p != null ? wi.p : (pi ? pi.sch : null),
+          answer: wi ? wi.answer : null, N: wi ? wi.N : null, dist: wi ? wi.dist : null, distByGroup: wi ? wi.distByGroup : null,
+          groups: wi ? wi.groups : null, disc: wi ? wi.disc : null,
+          stemHtml: wi ? wi.stemHtml : '', transcriptHtml: wi ? wi.transcriptHtml : '', passage: wi ? wi.passage : null,
+          hasWord: !!wi,
+        };
+        it.gap = it.sch != null && it.nat != null ? it.sch - it.nat : null;
+        it.mis = wi ? KaoWord.misconceptions(wi) : [];
+        return it;
+      });
+      out[y][id] = { items, N: w ? w.validN : null, hasWord: !!w, hasPdf: !!pItems,
+        openEnded: w ? w.parsed.openEnded : [], passages: w ? w.parsed.passages : [] };
+    }
+  }
+  return out;
+}
+
+function optBar(it, small) {
+  if (!it.dist || !it.N) return '<span class="note">（需 Word 學校版）</span>';
+  const misSet = new Set(it.mis.map(m => m.option));
+  const keys = ['A', 'B', 'C', 'D'].filter(k => it.dist[k] != null);
+  const other = (it.dist['未作答'] || 0) + (it.dist['複選'] || 0);
+  let h = `<div class="optbar${small ? ' sm' : ''}" role="img" aria-label="選項分布：${keys.map(k => `${k} ${Math.round(it.dist[k] / it.N * 100)}%`).join('、')}${other ? `、未作答或複選 ${Math.round(other / it.N * 100)}%` : ''}">`;
+  for (const k of keys) {
+    const n = it.dist[k]; if (!n) continue;
+    const cls = k === it.answer ? 'ok' : misSet.has(k) ? 'bad' : 'other';
+    const sh = n / it.N, pc = Math.round(sh * 100);
+    h += `<span class="seg ${cls}" style="flex:${n}" title="${k}：${pc}%（${n}/${it.N} 人）${k === it.answer ? '｜正答' : ''}">${sh >= 0.17 ? `${k} ${pc}%` : sh >= 0.06 ? k : ''}</span>`;
+  }
+  if (other) h += `<span class="seg none" style="flex:${other}" title="未作答／複選：${Math.round(other / it.N * 100)}%（${other} 人）"></span>`;
+  return h + '</div>';
+}
+function misText(it) {
+  if (!it.mis.length) return '';
+  const m = it.mis[0];
+  return `${Math.round(m.share * 100)}% 選 ${m.option}（正答 ${it.answer}）`;
+}
+
+function renderItems() {
+  const sec = $('sec-items');
+  const data = buildItems();
+  state.itemData = data;
+  const years = Object.keys(data).map(Number).filter(y => Object.keys(data[y]).length).sort();
+  if (!years.length) { $('itemsBody').innerHTML = '<div class="empty">尚未上傳「全校各科試題通過率分析」或 Word 試題分析（學校版）。</div>'; $('itemYears').innerHTML = ''; $('itemTabs').innerHTML = ''; return; }
+  if (!years.includes(state.itemYear)) state.itemYear = years[years.length - 1];
+  const y = state.itemYear;
+  $('itemYears').innerHTML = years.length > 1 ? '<span class="note">年份：</span>' + years.map(v => `<button type="button" class="yr" aria-pressed="${v === y}" data-y="${v}">${v} 年</button>`).join('') : '';
+  $('itemYears').querySelectorAll('button').forEach(b => b.onclick = () => { state.itemYear = +b.dataset.y; renderItems(); });
+  const ids = K.SUBJECTS.filter(id => data[y][id]);
+  if (!ids.includes(state.itemSubj)) state.itemSubj = ids[0];
+  $('itemTabs').innerHTML = ids.map(id => {
+    const d = data[y][id]; const nm = d.items.filter(i => i.mis.length).length;
+    return `<button type="button" role="tab" data-id="${id}" aria-selected="${id === state.itemSubj}">${SUBJ_LABEL[id]}<span class="c">${d.items.length} 題</span>${nm ? `<span class="lc">高誘答 ${nm}</span>` : ''}</button>`;
+  }).join('');
+  $('itemTabs').querySelectorAll('button').forEach(b => b.onclick = () => { state.itemSubj = b.dataset.id; state.itemSkill = null; renderItems(); });
+  renderItemSubject(data[y][state.itemSubj], y, state.itemSubj);
+}
+
+function renderItemSubject(d, y, id) {
+  const body = $('itemsBody');
+  state.charts = state.charts.filter(c => { if (c.canvas && c.canvas.id === 'itemChart') { c.destroy(); return false; } return true; });
+  const items = d.items;
+  const valid = items.filter(i => i.sch != null);
+  const avg = k => { const v = items.map(i => i[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const nMis = items.filter(i => i.mis.length).length;
+  const nHalf = items.filter(i => i.mis.length && i.mis[0].share >= 0.5).length;
+  const notes = [];
+  if (!d.hasWord) notes.push(`尚未上傳 ${y} 年${SUBJ_LABEL[id]}的 Word 試題分析（學校版），所以沒有選項分布與題目內容。`);
+  if (!d.hasPdf) notes.push(`尚未上傳 ${y} 年「全校各科試題通過率分析」，所以沒有全國、縣市比較與分項能力。`);
+  let h = notes.length ? `<div class="warnbox">${notes.map(n => `<p>ℹ️ ${n}</p>`).join('')}</div>` : '';
+  h += `<div class="stats" style="margin-top:.8rem">
+    <div class="stat"><div class="k">題數</div><div class="v">${items.length}<small> 題</small></div><div class="s">${d.openEnded.length ? `另有非選擇題 ${d.openEnded.length} 題` : '&nbsp;'}</div></div>
+    <div class="stat"><div class="k">有效人數</div><div class="v">${d.N ?? '—'}<small> 人</small></div><div class="s">${d.N ? `一位學生約 ${(1 / d.N).toFixed(2)}` : '&nbsp;'}</div></div>
+    <div class="stat"><div class="k">本校平均通過率</div><div class="v">${p2(avg('sch'))}</div><div class="s">全國 ${p2(avg('nat'))}・差距 ${f2(avg('sch') != null && avg('nat') != null ? avg('sch') - avg('nat') : null)}</div></div>
+    <div class="stat"><div class="k">有高誘答選項的題目</div><div class="v">${d.hasWord ? nMis : '—'}<small> 題</small></div><div class="s">${d.hasWord ? `其中過半選同一錯誤選項 ${nHalf} 題` : '需 Word 學校版'}</div></div>
+  </div>`;
+  h += `<h3>各題通過率</h3><p class="note">藍色長條是本校、橘色點線是全國。點長條可以看該題的題目與選答情形。</p>
+    <div class="legend"><span><i style="background:var(--s-school)"></i>本校</span><span><i class="line" style="background:var(--s-nat)"></i>全國</span></div>
+    <div class="table-scroll"><div class="chartbox" style="height:280px;min-width:${Math.max(600, items.length * 18)}px"><canvas id="itemChart"></canvas></div></div>`;
+  // 值得先看的題目
+  const misList = items.filter(i => i.mis.length).sort((a, b) => b.mis[0].share - a.mis[0].share || a.no - b.no).slice(0, 6);
+  const gapList = items.filter(i => i.gap != null).sort((a, b) => a.gap - b.gap).slice(0, 6);
+  const li = (it, right) => `<li><button type="button" class="itemlink" data-no="${it.no}"><b>第 ${it.no} 題</b><span class="sk">${esc(K.shortName(it.skill) || '')}</span><span class="rt">${right}</span></button></li>`;
+  h += `<h3>值得先看的題目</h3><div class="grid2">
+    <div class="panel"><h4><span>高誘答選項</span><span class="note">超過三分之一的學生選同一個錯誤選項</span></h4>
+      ${d.hasWord ? (misList.length ? `<ul class="picklist">${misList.map(it => li(it, `<b>${Math.round(it.mis[0].share * 100)}%</b> 選 ${it.mis[0].option}（正答 ${it.answer}）`)).join('')}</ul>` : '<p class="note">沒有符合的題目。</p>') : '<p class="note">需上傳 Word 試題分析（學校版）。</p>'}</div>
+    <div class="panel"><h4><span>與全國差距最大</span><span class="note">本校通過率減全國</span></h4>
+      ${gapList.length ? `<ul class="picklist">${gapList.map(it => li(it, `本校 ${p2(it.sch)}・全國 ${p2(it.nat)}・<b>${f2(it.gap)}</b>`)).join('')}</ul>` : '<p class="note">需上傳「全校各科試題通過率分析」。</p>'}</div>
+  </div>`;
+  // 逐題表
+  const skills = [...new Set(items.map(i => i.skill || ''))];
+  h += `<h3>逐題一覽</h3>
+    <div class="toolbar">
+      <label>排列方式 <select id="itemView">
+        <option value="skill">依分項分組</option><option value="no">依題號</option><option value="gap">依與全國差距</option><option value="sch">依本校通過率</option>
+      </select></label>
+      <label>分項 <select id="itemSkill"><option value="">全部分項</option>${skills.filter(Boolean).map(s => `<option value="${esc(s)}">${esc(K.shortName(s))}</option>`).join('')}</select></label>
+      <label class="chk"><input type="checkbox" id="itemOnlyMis"> 只看有高誘答選項的題目</label>
+    </div>
+    <div class="legend"><span><i style="background:${OPT_C.ok}"></i>正答</span><span><i style="background:${OPT_C.bad}"></i>高誘答選項</span><span><i style="background:${OPT_C.other}"></i>其他錯誤選項</span><span><i style="background:${OPT_C.none}"></i>未作答／複選</span></div>
+    <div class="table-scroll"><table class="itemtable" id="itemTable"></table></div>`;
+  if (d.openEnded.length) {
+    h += `<h3>非選擇題</h3><div class="grid2">${d.openEnded.map((o, i) => {
+      const db = (o.distByGroup && o.distByGroup['全體']) || {};
+      const cats = [['0未', '零級分（未作答）'], ['0', '零級分（有作答）'], ['1', '一級分'], ['2', '二級分'], ['3', '三級分']];
+      const tot = db['全體'] ? db['全體'].n : null;
+      return `<div class="panel"><h4><span>非選擇題第 ${o.no} 題</span><span>平均得分 <b>${p2(o.avg)}</b> / 3</span></h4>
+        <p class="note">${esc(o.objective)}</p>
+        <table class="mini">${cats.map(([k, l]) => { const n = db[k] ? db[k].n : null; return `<tr><td>${l}</td><td class="num">${n ?? '—'} 人</td><td style="width:50%"><div class="hbar"><span style="width:${tot && n ? n / tot * 100 : 0}%"></span></div></td></tr>`; }).join('')}</table>
+        <button type="button" class="ghost openq" data-open="${i}" style="margin-top:.5rem">看題目</button></div>`;
+    }).join('')}</div>`;
+  }
+  body.innerHTML = h;
+  $('itemView').value = state.itemView || 'skill';
+  $('itemSkill').value = state.itemSkill && skills.includes(state.itemSkill) ? state.itemSkill : '';
+  $('itemOnlyMis').checked = !!state.itemOnlyMis;
+  $('itemView').onchange = e => { state.itemView = e.target.value; drawItemTable(d); };
+  $('itemSkill').onchange = e => { state.itemSkill = e.target.value || null; drawItemTable(d); };
+  $('itemOnlyMis').onchange = e => { state.itemOnlyMis = e.target.checked; drawItemTable(d); };
+  body.querySelectorAll('.itemlink').forEach(b => b.onclick = () => openItem(d, +b.dataset.no));
+  body.querySelectorAll('.openq').forEach(b => b.onclick = () => openOpenEnded(d, +b.dataset.open));
+  drawItemTable(d);
+  // 長條圖
+  const C = { sch: css('--s-school'), nat: css('--s-nat') };
+  mkChart($('itemChart'), {
+    data: { labels: items.map(i => i.no), datasets: [
+      { type: 'line', label: '全國', data: items.map(i => i.nat), borderColor: C.nat, backgroundColor: C.nat, borderWidth: 1.5, pointRadius: 3, pointHoverRadius: 6, order: 0, spanGaps: true },
+      { type: 'bar', label: '本校', data: items.map(i => i.sch), backgroundColor: C.sch, borderRadius: 3, maxBarThickness: 22, order: 1 },
+    ] },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      onClick: (e, els, chart) => { const pts = chart.getElementsAtEventForMode(e, 'index', { intersect: false }, true); if (pts.length) openItem(d, items[pts[0].index].no); },
+      onHover: (e, els) => { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+      scales: { y: { min: 0, max: 1, ticks: { stepSize: .25, callback: v => v.toFixed(2) }, grid: { color: '#eef1f5' } }, x: { grid: { display: false }, ticks: { autoSkip: false, font: { size: 12 } } } },
+      plugins: { tooltip: { callbacks: { title: c => `第 ${c[0].label} 題`, label: c => `${c.dataset.label}：${c.raw == null ? '—' : c.raw.toFixed(2)}`,
+        afterBody: c => { const it = items[c[0].dataIndex]; const a = []; if (it.gap != null) a.push(`差距：${f2(it.gap)}`); if (it.mis.length) a.push('高誘答選項：' + misText(it)); if (it.skill) a.push('分項：' + K.shortName(it.skill)); return a; } } } } },
+  });
+}
+
+function drawItemTable(d) {
+  $('itemTable').innerHTML = itemTableHtml(d, state.itemView || 'skill', state.itemSkill, state.itemOnlyMis);
+  $('itemTable').querySelectorAll('.clickrow').forEach(tr => {
+    tr.onclick = () => openItem(d, +tr.dataset.no);
+    tr.onkeydown = e => { if (e.key === 'Enter') openItem(d, +tr.dataset.no); };
+  });
+}
+function itemTableHtml(d, view, skill, onlyMis) {
+  let items = d.items.slice();
+  if (skill) items = items.filter(i => i.skill === skill);
+  if (onlyMis) items = items.filter(i => i.mis.length);
+  const row = it => `<tr class="clickrow" data-no="${it.no}" tabindex="0">
+    <td class="num"><b>${it.no}</b></td>
+    <td>${esc(K.shortName(it.skill) || '—')}</td>
+    <td class="wrap obj">${esc(it.objective || '')}</td>
+    <td class="num">${it.answer || '—'}</td>
+    <td class="num"><b>${p2(it.sch)}</b></td><td class="num">${p2(it.nat)}</td>
+    <td class="num"><span class="gapchip l${it.gap == null ? 'x' : K.gapLevel(it.gap)}">${f2(it.gap)}</span></td>
+    <td class="optcell">${optBar(it, true)}</td>
+    <td>${it.mis.length ? `<span class="tag err">高誘答 ${it.mis[0].option} ${Math.round(it.mis[0].share * 100)}%</span>` : ''}</td></tr>`;
+  let h = '<thead><tr><th class="num">題號</th><th>分項能力</th><th>評量目標</th><th class="num">正答</th><th class="num">本校</th><th class="num">全國</th><th class="num">差距</th><th>選項分布（比例）</th><th>標記</th></tr></thead><tbody>';
+  if (!items.length) h += '<tr><td colspan="9" class="empty">沒有符合條件的題目。</td></tr>';
+  else if (view === 'skill') {
+    const groups = [...new Set(items.map(i => i.skill || ''))];
+    for (const g of groups) {
+      const gi = items.filter(i => (i.skill || '') === g);
+      const av = k => { const v = gi.map(i => i[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+      const s = av('sch'), n = av('nat');
+      h += `<tr class="grouprow"><td colspan="9"><b>${esc(K.shortName(g) || '未分類（需「試題通過率分析」）')}</b>　${gi.length} 題・本校平均 ${p2(s)}・全國 ${p2(n)}・差距 ${f2(s != null && n != null ? s - n : null)}${gi.filter(i => i.mis.length).length ? `・有高誘答選項 ${gi.filter(i => i.mis.length).length} 題` : ''}</td></tr>`;
+      h += gi.map(row).join('');
+    }
+  } else {
+    if (view === 'gap') items.sort((a, b) => (a.gap ?? 9) - (b.gap ?? 9));
+    else if (view === 'sch') items.sort((a, b) => (a.sch ?? 9) - (b.sch ?? 9));
+    h += items.map(row).join('');
+  }
+  return h + '</tbody>';
+}
+
+// ---------- 題目視窗 ----------
+function openItem(d, no) {
+  const list = d.items;
+  const idx = list.findIndex(i => i.no === no);
+  const it = list[idx];
+  if (!it) return;
+  const misSet = new Set(it.mis.map(m => m.option));
+  let h = `<div class="mhead"><div><div class="note">${it.year} 年・${SUBJ_LABEL[it.subject]}</div><h2 id="mTitle">第 ${it.no} 題</h2>
+    <div class="mtags">${it.skill ? `<span class="tag wait">${esc(K.shortName(it.skill))}</span>` : ''}${it.mis.length ? `<span class="tag err">高誘答選項 ${it.mis[0].option}</span>` : ''}</div></div>
+    <div class="mnav"><button type="button" class="ghost" id="mPrev" ${idx <= 0 ? 'disabled' : ''} aria-label="上一題">‹ 上一題</button><button type="button" class="ghost" id="mNext" ${idx >= list.length - 1 ? 'disabled' : ''} aria-label="下一題">下一題 ›</button><button type="button" id="mClose" aria-label="關閉">關閉 ✕</button></div></div>`;
+  if (it.objective) h += `<p class="mobj"><b>評量目標：</b>${esc(it.objective)}</p>`;
+  h += `<div class="stats mstats">
+    <div class="stat"><div class="k">正答</div><div class="v">${it.answer || '—'}</div></div>
+    <div class="stat"><div class="k">本校通過率</div><div class="v">${p2(it.sch)}</div><div class="s">${it.N && it.answer ? `${it.dist[it.answer] || 0} / ${it.N} 人答對` : '&nbsp;'}</div></div>
+    <div class="stat"><div class="k">全國／縣市</div><div class="v" style="font-size:1.5rem">${p2(it.nat)}／${p2(it.cty)}</div><div class="s">本校−全國 ${f2(it.gap)}</div></div>
+  </div>`;
+  if (it.mis.length) h += `<div class="misbox">⚠️ <b>${Math.round(it.mis[0].share * 100)}% 的學生選了 ${it.mis[0].option}</b>（${it.mis[0].n}/${it.N} 人；正答是 ${it.answer}）。${it.mis.length > 1 ? `另有 ${it.mis.slice(1).map(m => `${Math.round(m.share * 100)}% 選 ${m.option}`).join('、')}。` : ''}這是最值得在課堂上釐清的地方：先看這個選項為什麼吸引學生。</div>`;
+  if (it.dist && it.N) {
+    const groups = ['全體', '精熟', '基礎', '待加強'].filter(g => it.distByGroup[g] && it.distByGroup[g]['全體'] && it.distByGroup[g]['全體'].n);
+    const keys = ['A', 'B', 'C', 'D', '未作答', '複選'].filter(k => it.dist[k] != null && (k.length === 1 || it.dist[k] > 0));
+    h += `<h3>選答分布</h3><div class="optrows">${keys.map(k => {
+      const n = it.dist[k] || 0; const cls = k === it.answer ? 'ok' : misSet.has(k) ? 'bad' : k.length > 1 ? 'none' : 'other';
+      return `<div class="optrow"><span class="ol">${k}${k === it.answer ? ' ✓' : ''}</span><div class="hbar big"><span class="${cls}" style="width:${n / it.N * 100}%"></span></div><span class="on">${Math.round(n / it.N * 100)}%（${n} 人）</span></div>`;
+    }).join('')}</div>`;
+    h += `<div class="table-scroll"><table class="mini"><thead><tr><th>等級</th><th class="num">有效人數</th>${keys.map(k => `<th class="num">${k}${k === it.answer ? ' ✓' : ''}</th>`).join('')}</tr></thead><tbody>${groups.map(g => {
+      const r = it.distByGroup[g];
+      return `<tr><td>${g}</td><td class="num">${r['全體'].n}</td>${keys.map(k => { const tot = r['全體'].n, n = r[k] && r[k].n != null ? r[k].n : null; return `<td class="num${k === it.answer ? ' okc' : misSet.has(k) ? ' badc' : ''}">${n == null || !tot ? '—' : Math.round(n / tot * 100) + '%'}</td>`; }).join('')}</tr>`;
+    }).join('')}</tbody></table></div>`;
+  }
+  const ps = it.passage ? d.passages.find(p => `${p.from}-${p.to}` === it.passage) : null;
+  if (ps || it.stemHtml || it.transcriptHtml) {
+    h += '<h3>題目</h3>';
+    if (ps) h += `<details class="passage" open><summary>第 ${ps.from}–${ps.to} 題 題組選文</summary><div class="qbody">${ps.html}</div></details>`;
+    if (it.transcriptHtml) h += `<div class="qlabel">錄音稿</div><div class="qbody transcript">${it.transcriptHtml}</div>`;
+    if (it.stemHtml) h += `${it.transcriptHtml ? '<div class="qlabel">題目</div>' : ''}<div class="qbody">${it.stemHtml}</div>`;
+    h += '<p class="note">題目內容由 Word 檔轉換，版面可能與原卷略有差異；若圖片或算式顯示不完整，請以原始 Word 檔為準。</p>';
+  } else h += '<p class="note">上傳該科 Word 試題分析（學校版）後，這裡會顯示題目內容與選答分布。</p>';
+  showModal(h);
+  $('mPrev').onclick = () => openItem(d, list[idx - 1].no);
+  $('mNext').onclick = () => openItem(d, list[idx + 1].no);
+  state.modalNav = { prev: idx > 0 ? () => openItem(d, list[idx - 1].no) : null, next: idx < list.length - 1 ? () => openItem(d, list[idx + 1].no) : null };
+}
+function openOpenEnded(d, i) {
+  const o = d.openEnded[i];
+  let h = `<div class="mhead"><div><div class="note">非選擇題</div><h2 id="mTitle">第 ${o.no} 題</h2></div><div class="mnav"><button type="button" id="mClose">關閉 ✕</button></div></div>`;
+  if (o.objective) h += `<p class="mobj"><b>評量目標：</b>${esc(o.objective)}</p>`;
+  h += `<p>本校平均得分 <b>${p2(o.avg)}</b>（滿分 3 級分）。</p><h3>題目</h3><div class="qbody">${o.stemHtml}</div>`;
+  showModal(h);
+  state.modalNav = null;
+}
+function showModal(html) {
+  const m = $('modal');
+  $('modalBox').innerHTML = html;
+  m.classList.remove('hidden');
+  document.body.classList.add('noscroll');
+  $('mClose').onclick = closeModal;
+  $('modalBox').scrollTop = 0;
+  $('mClose').focus();
+}
+function closeModal() { $('modal').classList.add('hidden'); document.body.classList.remove('noscroll'); state.modalNav = null; }
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+document.addEventListener('keydown', e => {
+  if ($('modal').classList.contains('hidden')) return;
+  if (e.key === 'Escape') closeModal();
+  else if (e.key === 'ArrowLeft' && state.modalNav && state.modalNav.prev) state.modalNav.prev();
+  else if (e.key === 'ArrowRight' && state.modalNav && state.modalNav.next) state.modalNav.next();
+});
+function gotoItems(id, skill) {
+  state.itemSubj = id; state.itemSkill = skill; state.itemView = 'skill';
+  renderItems();
+  $('sec-items').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ---------- 資料檢查 ----------
+function renderCheck(A, recs) {
+  const ok = recs.filter(r => r.status === 'ok');
+  const years = [...new Set(recs.filter(r => r.year).map(r => r.year))].sort();
+  const missing = [], issues = [];
+  const coveredSub = y => Object.values(A.subskills).some(list => list.some(s => s.series[y]));
+  for (const y of years) {
+    const has = k => ok.some(r => r.year === y && r.kind === k);
+    if (!has('report')) missing.push(`${y} 年缺「全校學生成績報告」：考生人數、能力等級、寫作級分不會出現這一年。`);
+    if (!has('itemrates')) missing.push(`${y} 年缺「全校各科試題通過率分析」：各科平均通過率、逐題的全國比較與題目所屬分項不會出現這一年。`);
+    if (!has('subskills') && !coveredSub(y)) missing.push(`${y} 年缺「全校各科分項能力通過率分析」，其他年份的報告也沒有涵蓋這一年：分項能力不會出現這一年。`);
+    const words = ok.filter(r => r.year === y && r.kind === 'word').map(r => r.subject);
+    const lackW = K.SUBJECTS.filter(s => !words.includes(s));
+    if (lackW.length && lackW.length < 6) missing.push(`${y} 年缺 Word 試題分析（學校版）：${lackW.map(s => SUBJ_LABEL[s]).join('、')}。這些科目沒有選項比例與題目內容。`);
+    if (lackW.length === 6) missing.push(`${y} 年沒有 Word 試題分析（學校版）：逐題分析只有通過率，沒有選項比例與題目內容。`);
+  }
+  // 數字一致性
+  for (const r of ok.filter(r => r.kind === 'itemrates')) {
+    const got = Object.keys(r.data.subjects);
+    if (got.length < 6) issues.push(`${r.year} 年「試題通過率分析」只讀到 ${got.map(s => SUBJ_LABEL[s]).join('、')}，其他科目可能缺頁或格式不同。`);
+  }
+  for (const r of ok.filter(r => r.kind === 'report')) {
+    const lv = Object.keys(r.data.levels);
+    if (lv.length < 7) issues.push(`${r.year} 年「成績報告」的能力等級只讀到 ${lv.length} 項，請確認檔案是否完整。`);
+    if (!r.data.writing) issues.push(`${r.year} 年「成績報告」沒有讀到寫作級分。`);
+  }
+  const D = state.itemData || {};
+  for (const r of ok.filter(r => r.kind === 'word' && r.parsed)) {
+    const pdf = ok.find(p => p.kind === 'itemrates' && p.year === r.year);
+    const pi = pdf && pdf.data.subjects[r.subject] ? pdf.data.subjects[r.subject].items : null;
+    const wi = r.parsed.items;
+    const lab = `${r.year} 年${SUBJ_LABEL[r.subject]}`;
+    if (pi && pi.length !== wi.length) issues.push(`${lab}：Word 有 ${wi.length} 題，「試題通過率分析」有 ${pi.length} 題，題數對不上。`);
+    if (pi) { const bad = wi.filter(w => { const q = pi.find(x => x.no === w.no); return q && w.p != null && Math.abs(q.sch - w.p) > 0.006; }).length; if (bad) issues.push(`${lab}：有 ${bad} 題的本校通過率，Word 與 PDF 不一致，可能不是同一份資料。`); }
+    const badSum = wi.filter(w => w.N && ['A', 'B', 'C', 'D', '未作答', '複選'].reduce((a, k) => a + (w.dist[k] || 0), 0) !== w.N).length;
+    if (badSum) issues.push(`${lab}：有 ${badSum} 題的選項人數加總不等於有效人數。`);
+    if (r.validN && wi.some(w => w.N && w.N !== r.validN)) issues.push(`${lab}：Word 前言寫的有效人數（${r.validN} 人）與逐題表格不一致。`);
+    const rep = ok.find(p => p.kind === 'report' && p.year === r.year);
+    const pcts = rep && rep.data.levels[r.subject];
+    if (pcts && r.validN && !pcts.filter(v => v != null).every(v => Math.abs(Math.round(v * r.validN / 100) * 100 / r.validN - v) < 0.006))
+      issues.push(`${lab}：Word 的有效人數（${r.validN} 人）與成績報告的等級百分比對不上，請確認兩份檔案是同一所學校、同一年。`);
+  }
+  A.warnings.forEach(w => issues.push(w));
+  recs.filter(r => r.status === 'warn').forEach(r => issues.push(`「${r.name}」是全國版，沒有本校作答資料，已略過；請改傳學校版。`));
+  recs.filter(r => r.status === 'err').forEach(r => issues.push(`「${r.name}」無法使用（${r.note}），已略過。`));
+  let h = '';
+  if (!missing.length && !issues.length) h = `<div class="checkok">✓ ${years.join('、')} 年的檔案齊全，各檔案之間的數字也都對得上。</div>`;
+  if (missing.length) h += `<h3>缺少的檔案</h3><p class="note">不影響其他段落，只是少了下列內容；補上傳後會自動更新。</p><ul class="checklist">${missing.map(m => `<li>${esc(m)}</li>`).join('')}</ul>`;
+  if (issues.length) h += `<h3>需要留意</h3><ul class="checklist">${issues.map(m => `<li>⚠️ ${esc(m)}</li>`).join('')}</ul>`;
+  $('checkBody').innerHTML = h;
+}
+
+// ---------- 網路狀態（斷網測試用） ----------
+function updateNet() {
+  const b = $('netBadge'); if (!b) return;
+  if (navigator.onLine) { b.className = 'netbadge on'; b.textContent = '🌐 目前已連線'; }
+  else { b.className = 'netbadge off'; b.textContent = '✈️ 目前離線：現在上傳分析仍可正常完成，表示資料沒有傳出去'; }
+}
+window.addEventListener('online', updateNet); window.addEventListener('offline', updateNet); updateNet();
+
+// ---------- 列印 ----------
+const PRINT_SECS = [['sec-basic', '學校基本資料與考生人數'], ['sec-level', '各科能力等級分布'], ['sec-writing', '寫作測驗級分分布'], ['sec-mean', '各科平均通過率'],
+  ['sec-sub', '分項能力（總覽＋全部科目小圖）'], ['sec-items', '逐題分析'], ['sec-rule', '判讀原則']];
+function openPrintPanel() {
+  const o = state.printOpts || { secs: PRINT_SECS.map(x => x[0]), items: 'cur' };
+  const cur = state.itemYear && state.itemSubj ? `${state.itemYear} 年${SUBJ_LABEL[state.itemSubj]}` : '目前選的科目';
+  let h = `<div class="mhead"><div><h2 id="mTitle">列印／存成 PDF</h2><div class="note">A4 直式。勾選要印的段落後按「開始列印」，在列印視窗可選印表機或「另存為 PDF」。</div></div><div class="mnav"><button type="button" id="mClose">關閉 ✕</button></div></div>
+    <div class="pp-list">${PRINT_SECS.map(([id, l]) => `<label><input type="checkbox" name="pp" value="${id}" ${o.secs.includes(id) ? 'checked' : ''}> ${l}</label>` + (id === 'sec-items' ? `<div class="pp-sub">
+      <label><input type="radio" name="ppi" value="cur" ${o.items !== 'all' ? 'checked' : ''}> 只印目前畫面的科目（${esc(cur)}，含圖表與目前的排列方式）</label>
+      <label><input type="radio" name="ppi" value="all" ${o.items === 'all' ? 'checked' : ''}> ${state.itemYear || ''} 年全部科目的逐題一覽表（不含圖表，頁數較多）</label></div>` : '')).join('')}</div>
+    <div class="btns" style="justify-content:flex-start"><button type="button" id="ppGo">開始列印</button><button type="button" class="ghost" id="ppAll">全選</button><button type="button" class="ghost" id="ppNone">全部取消</button></div>
+    <p class="note" style="margin-top:.8rem">提示：列印視窗的「更多設定」裡請勾選「背景圖形」，色塊與長條的顏色才會印出來。</p>`;
+  showModal(h);
+  state.modalNav = null;
+  const boxes = () => [...document.querySelectorAll('#modalBox input[name=pp]')];
+  $('ppAll').onclick = () => boxes().forEach(b => b.checked = true);
+  $('ppNone').onclick = () => boxes().forEach(b => b.checked = false);
+  $('ppGo').onclick = () => {
+    state.printOpts = { secs: boxes().filter(b => b.checked).map(b => b.value), items: (document.querySelector('#modalBox input[name=ppi]:checked') || {}).value || 'cur' };
+    closeModal();
+    setTimeout(() => { try { window.print(); } catch (_) {} }, 80);
+  };
+}
+function preparePrint(opts) {
+  if (opts && opts.secs) state.printOpts = opts;
+  const o = state.printOpts || { secs: PRINT_SECS.map(x => x[0]), items: 'cur' };
+  const recs = [...state.files.values()].filter(r => r.status === 'ok');
+  const A = K.aggregate(recs);
+  const today = new Date();
+  $('printHead').innerHTML = `<h1>${esc(A.school.name || '')} 國中教育會考數據分析</h1><p>資料年份：${A.years.map(y => y + ' 年').join('、') || '—'}${A.school.code ? '　學校代碼：' + A.school.code : ''}　產出日期：${today.getFullYear() - 1911}年${today.getMonth() + 1}月${today.getDate()}日</p><p class="note">數據用於了解學生的長期學習特性，作為教學與補救的參考，不用於評斷個別教師。</p>`;
+  let first = true;
+  for (const [id] of PRINT_SECS) {
+    const el = $(id); const on = o.secs.includes(id);
+    el.classList.toggle('skipprint', !on);
+    el.classList.toggle('pbreak', on && !first);
+    if (on) first = false;
+  }
+  const sec = $('sec-items');
+  sec.classList.toggle('printall', o.items === 'all');
+  if (o.items === 'all' && state.itemData && state.itemData[state.itemYear]) {
+    const y = state.itemYear, D = state.itemData[y];
+    $('printItems').innerHTML = K.SUBJECTS.filter(id => D[id]).map(id => {
+      const d = D[id]; const v = d.items.filter(i => i.sch != null);
+      const av = k => { const a = d.items.map(i => i[k]).filter(x => x != null); return a.length ? a.reduce((p, q) => p + q, 0) / a.length : null; };
+      return `<h3>${y} 年 ${SUBJ_LABEL[id]}（${d.items.length} 題${d.N ? `・有效 ${d.N} 人` : ''}）</h3><p class="note">本校平均 ${p2(av('sch'))}・全國 ${p2(av('nat'))}・有高誘答選項 ${d.items.filter(i => i.mis.length).length} 題</p><table class="itemtable">${itemTableHtml(d, 'skill', null, false)}</table>`;
+    }).join('');
+  } else $('printItems').innerHTML = '';
+  for (const c of state.charts) {
+    const box = c.canvas.parentNode;
+    const inGrid = c.canvas.closest('.grid2, .grid3');
+    const h = parseInt(box.style.height) || c.height || 200;
+    c.resize(inGrid ? 330 : 690, Math.min(h, inGrid ? 230 : 300));
+  }
+}
+function cleanupPrint() {
+  for (const [id] of PRINT_SECS) { const el = $(id); if (el) el.classList.remove('skipprint', 'pbreak'); }
+  $('sec-items').classList.remove('printall');
+  $('printItems').innerHTML = '';
+  for (const c of state.charts) { try { c.resize(); } catch (_) {} }
+}
+window.addEventListener('beforeprint', () => preparePrint());
+// 測試與自動化用：設定列印選項
+window.__kaoPrintOpts = o => { state.printOpts = o; };
+window.addEventListener('afterprint', cleanupPrint);
+window.__kaoPrint = { prepare: preparePrint, cleanup: cleanupPrint };
+
+render();
+</script>
+</body>
+</html>
